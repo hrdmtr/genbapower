@@ -58,5 +58,23 @@ function getProductById(productId) {
     return null;
 }
 
+// ローカルストレージから商品データを読み込む
+function getProductMaster() {
+    const storedProducts = localStorage.getItem('productMaster');
+    if (storedProducts) {
+        return JSON.parse(storedProducts);
+    }
+    return productMaster;
+}
+
+// 商品IDから商品情報を取得する関数（ローカルストレージ対応版）
+function getProductById(productId) {
+    const currentProducts = getProductMaster();
+    if (currentProducts[productId]) {
+        return currentProducts[productId];
+    }
+    return null;
+}
+
 // エクスポート
-export { getProductById, productMaster };
+export { getProductById, productMaster, getProductMaster };
