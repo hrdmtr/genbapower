@@ -1,8 +1,12 @@
+// アプリケーションのメインスクリプト
+import { getProductById } from './products.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     // DOM要素
     const connectButton = document.getElementById('connect-button');
     const connectionStatus = document.getElementById('connection-status');
     const logContainer = document.getElementById('log-container');
+    const productContainer = document.getElementById('product-container');
 
     // シリアル接続オブジェクト
     let port = null;
@@ -32,8 +36,66 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
             orderId: parts[0],
             table: parts[1],
-            menu: parts[2]
+            productId: parts[2] // メニュー名を商品IDとして扱う
         };
+    }
+
+    // 商品情報の表示
+    function displayProductInfo(productId) {
+        // 以前の商品情報をクリア
+        productContainer.innerHTML = '';
+        
+        // 商品マスターから商品情報を取得
+        const product = getProductById(productId);
+        
+        if (!product) {
+            // 商品が見つからない場合
+            const notFoundElement = document.createElement('div');
+            notFoundElement.classList.add('product-placeholder');
+            notFoundElement.textContent = `商品ID「${productId}」の商品情報が見つかりません`;
+            productContainer.appendChild(notFoundElement);
+            return;
+        }
+        
+        // 商品カードの作成
+        const productCard = document.createElement('div');
+        productCard.classList.add('product-card');
+        
+        // 画像の設定（存在しない場合はプレースホルダー画像を使用）
+        const imageElement = document.createElement('img');
+        imageElement.classList.add('product-image');
+        imageElement.src = product.image;
+        imageElement.alt = product.name;
+        imageElement.onerror = () => {
+            imageElement.src = 'images/no-image.jpg';
+            imageElement.alt = '画像がありません';
+        };
+        
+        // 商品詳細情報
+        const detailsElement = document.createElement('div');
+        detailsElement.classList.add('product-details');
+        
+        const nameElement = document.createElement('div');
+        nameElement.classList.add('product-name');
+        nameElement.textContent = product.name;
+        
+        const priceElement = document.createElement('div');
+        priceElement.classList.add('product-price');
+        priceElement.textContent = `¥${product.price.toLocaleString()}`;
+        
+        const descriptionElement = document.createElement('div');
+        descriptionElement.classList.add('product-description');
+        descriptionElement.textContent = product.description || '商品説明がありません';
+        
+        // 要素の組み立て
+        detailsElement.appendChild(nameElement);
+        detailsElement.appendChild(priceElement);
+        detailsElement.appendChild(descriptionElement);
+        
+        productCard.appendChild(imageElement);
+        productCard.appendChild(detailsElement);
+        
+        productContainer.appendChild(productCard);
     }
 
     // APIにデータを送信
@@ -44,7 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(orderData)
+                body: JSON.stringify({
+                    orderId: orderData.orderId,
+                    table: orderData.table,
+                    menu: orderData.productId // APIの互換性のためmenuキーを使用
+                })
             });
 
             if (!response.ok) {
@@ -79,6 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     try {
                         const orderData = parseQRData(text);
+                        // 商品情報を表示
+                        displayProductInfo(orderData.productId);
+                        // APIに注文データを送信
                         await sendToAPI(orderData);
                     } catch (error) {
                         addLog(`データ処理エラー: ${error.message}`, 'error');
@@ -158,5 +227,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('このブラウザはWeb Serial APIに対応していません。Chrome 89以降をご使用ください。', 'error');
     } else {
         addLog('準備完了。接続ボタンをクリックしてQRコードリーダーに接続してください。', 'info');
+    }
+
+    // デモ用テスト機能：URLパラメータで商品IDを指定すると表示
+    const urlParams = new URLSearchParams(window.location.search);
+    const testProductId = urlParams.get('testProduct');
+    if (testProductId) {
+        addLog(`テストモード: 商品ID ${testProductId} を表示`, 'info');
+        displayProductInfo(testProductId);
     }
 });
