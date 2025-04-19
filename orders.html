@@ -194,6 +194,11 @@
             color: #f39c12;
         }
         
+        .elapsed-time-cancelled {
+            background-color: rgba(149, 165, 166, 0.1);
+            color: #7f8c8d;
+        }
+        
         .order-info {
             margin-bottom: 15px;
         }
@@ -482,46 +487,10 @@
         </div>
     </div>
     
-    <script>
+    <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
-            // 経過時間を計算・表示する関数
-            function updateElapsedTimes() {
-                const elapsedTimeElements = document.querySelectorAll('.elapsed-time');
-                const now = new Date();
-                
-                elapsedTimeElements.forEach(element => {
-                    const timestamp = element.getAttribute('data-timestamp');
-                    if (!timestamp) return;
-                    
-                    const orderTime = new Date(timestamp);
-                    const elapsedMs = now - orderTime;
-                    const elapsedSeconds = Math.floor(elapsedMs / 1000);
-                    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-                    const elapsedHours = Math.floor(elapsedMinutes / 60);
-                    const elapsedDays = Math.floor(elapsedHours / 24);
-                    
-                    const elapsedTimeValue = element.querySelector('.elapsed-time-value');
-                    
-                    // 親要素からステータスを取得
-                    const orderCard = element.closest('.order-card');
-                    const orderStatus = orderCard.querySelector('.order-status').textContent;
-                    
-                    // すべての注文を秒単位で表示
-                    // 警告色の設定
-                    if (elapsedMinutes >= 30) element.classList.add('elapsed-time-warning');
-                    if (elapsedHours >= 1) element.classList.add('elapsed-time-urgent');
-                    
-                    // 秒単位の表示
-                    elapsedTimeValue.textContent = `${elapsedSeconds}`;
-                    
-                    // 状態によるマーカー（アイコンでステータスを区別）
-                    if (orderStatus === '提供済み') {
-                        element.querySelector('i').className = 'fas fa-check-circle';
-                    } else if (orderStatus === 'キャンセル') {
-                        element.querySelector('i').className = 'fas fa-times-circle';
-                    }
-                });
-            }
+            // 経過時間の更新関数をインポート
+            import { updateElapsedTimes } from './elapsed_time.js';
             
             // 1秒ごとに経過時間を更新
             updateElapsedTimes();
@@ -733,7 +702,7 @@
                         <div class="order-status ${statusClass}">${order.status}</div>
                         <div class="order-header">
                             <div class="order-id">${order.id}</div>
-                            <div class="elapsed-time" data-timestamp="${order.timestamp}">
+                            <div class="elapsed-time" data-timestamp="${order.timestamp}" data-order-id="${order.id}">
                                 <i class="fas fa-clock"></i> 
                                 <span class="elapsed-time-value">計算中...</span>
                                 <span class="elapsed-time-unit">秒</span>
