@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isConnected = true;
                 connectionStatus.textContent = '接続成功';
                 connectionStatus.classList.add('connected');
-                connectButton.textContent = '切断';
+                connectButton.innerHTML = '<i class="fas fa-unlink"></i> 切断';
                 addLog('QRコードリーダーに接続しました', 'success');
                 
                 // 読み取り開始
@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isConnected = false;
         connectionStatus.textContent = '未接続';
         connectionStatus.classList.remove('connected');
-        connectButton.textContent = 'QRコードリーダーに接続';
+        connectButton.innerHTML = '<i class="fas fa-plug"></i> QRコードリーダーに接続';
         addLog('QRコードリーダーから切断しました', 'info');
     }
 
@@ -244,10 +244,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ページ読み込み時のチェック
     try {
-        if (!('serial' in navigator)) {
+        // 開発環境での実行を優先するため、常にナビゲーターをチェック
+        if (window.isSecureContext === false) {
+            // 非セキュアコンテキスト（HTTP）では、Web Serial APIは動作しない
+            connectButton.disabled = true;
+            addLog('HTTPSでない環境ではWeb Serial APIに接続できません。デモモードで実行します。', 'error');
+        } else if (!('serial' in navigator)) {
             connectButton.disabled = true;
             addLog('このブラウザはWeb Serial APIに対応していません。Chrome 89以降をご使用ください。', 'error');
         } else {
+            // 接続ボタンを有効化
+            connectButton.disabled = false;
             addLog('準備完了。接続ボタンをクリックしてQRコードリーダーに接続してください。', 'info');
         }
     } catch (e) {
