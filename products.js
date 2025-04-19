@@ -50,14 +50,6 @@ const productMaster = {
     }
 };
 
-// 商品IDから商品情報を取得する関数
-function getProductById(productId) {
-    if (productMaster[productId]) {
-        return productMaster[productId];
-    }
-    return null;
-}
-
 // ローカルストレージから商品データを読み込む
 function getProductMaster() {
     const storedProducts = localStorage.getItem('productMaster');
