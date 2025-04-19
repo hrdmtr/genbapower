@@ -71,7 +71,7 @@ h2 {
     background-color: #2ecc71;
 }
 
-.product-panel, .log-panel {
+.product-panel, .log-panel, .test-panel {
     background-color: #fff;
     border-radius: 5px;
     padding: 20px;
@@ -133,6 +133,51 @@ h2 {
 .product-description {
     color: #7f8c8d;
     line-height: 1.6;
+}
+
+/* テスト用コントロールスタイル */
+.test-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.test-select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+    margin-bottom: 10px;
+    width: 200px;
+}
+
+.product-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.test-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.test-button:hover {
+    background-color: #2980b9;
+}
+
+.test-description {
+    font-size: 14px;
+    color: #7f8c8d;
+    font-style: italic;
+    margin-top: 5px;
 }
 
 #log-container {

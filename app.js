@@ -236,4 +236,35 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`テストモード: 商品ID ${testProductId} を表示`, 'info');
         displayProductInfo(testProductId);
     }
+    
+    // テスト用商品ボタンのイベントリスナー設定
+    const testButtons = document.querySelectorAll('.test-button');
+    const testTableSelect = document.getElementById('test-table');
+    
+    testButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // QRコード読み取りをシミュレーション
+            const productId = button.getAttribute('data-product-id');
+            const table = testTableSelect.value;
+            const orderId = 'ORDER' + Math.floor(1000 + Math.random() * 9000); // ランダムな注文ID生成
+            
+            // QRコードデータフォーマットに合わせた文字列生成
+            const qrData = `${orderId}|${table}|${productId}`;
+            
+            // シミュレーションデータを処理
+            addLog(`テスト読取り: ${qrData}`, 'info');
+            
+            try {
+                const orderData = parseQRData(qrData);
+                // 商品情報を表示
+                displayProductInfo(orderData.productId);
+                // APIに注文データを送信
+                sendToAPI(orderData).catch(error => {
+                    // API送信エラーはすでにハンドルされているのでここでは特に何もしない
+                });
+            } catch (error) {
+                addLog(`データ処理エラー: ${error.message}`, 'error');
+            }
+        });
+    });
 });
