@@ -32,8 +32,18 @@
                         <input type="number" id="product-price" class="form-input" placeholder="例: 800" min="0" required>
                     </div>
                     <div class="form-row">
-                        <label for="product-image">画像パス:</label>
-                        <input type="text" id="product-image" class="form-input" placeholder="例: images/shoyu_ramen.jpg">
+                        <label for="product-image">画像:</label>
+                        <div class="image-upload-container">
+                            <div class="image-preview" id="image-preview">
+                                <img src="images/no-image.jpg" alt="画像プレビュー" id="preview-img">
+                            </div>
+                            <div class="image-upload-controls">
+                                <input type="file" id="image-upload" accept="image/*" class="image-upload-input">
+                                <label for="image-upload" class="image-upload-label">画像をアップロード</label>
+                                <input type="hidden" id="product-image" value="">
+                                <div class="image-path" id="image-path">選択されていません</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-row">
                         <label for="product-description">商品説明:</label>
