@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>処理時間分析 - QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            background-color: var(--card-color);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+        }
+        
+        .chart-container:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .date-range-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.02);
+            padding: 15px;
+            border-radius: var(--border-radius);
+        }
+        
+        .date-range-selector label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+        
+        .date-range-selector input {
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            font-family: inherit;
+        }
+        
+        .date-range-selector button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        
+        .date-range-selector button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .order-list {
+            margin-top: 30px;
+        }
+        
+        .order-list-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .order-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .order-table th:first-child {
+            border-top-left-radius: var(--border-radius);
+        }
+        
+        .order-table th:last-child {
+            border-top-right-radius: var(--border-radius);
+        }
+        
+        .order-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            vertical-align: middle;
+        }
+        
+        .order-table tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        .order-table tr:last-child td:first-child {
+            border-bottom-left-radius: var(--border-radius);
+        }
+        
+        .order-table tr:last-child td:last-child {
+            border-bottom-right-radius: var(--border-radius);
+        }
+        
+        .order-table tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .time-cell {
+            font-family: monospace;
+            font-weight: 700;
+        }
+        
+        .warning-time {
+            color: #f39c12;
+        }
+        
+        .critical-time {
+            color: #e74c3c;
+        }
+        
+        .order-filter {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .order-filter label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+        
+        .order-filter select {
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            font-family: inherit;
+        }
+        
+        .order-filter button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        
+        .order-filter button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .order-count {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-left: 10px;
+            font-weight: normal;
+        }
+        
+        .time-bars {
+            display: flex;
+            height: 20px;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .time-bar {
+            height: 20px;
+            transition: width 0.5s;
+        }
+        
+        .time-bar-受付 {
+            background-color: rgba(52, 152, 219, 0.7);
+        }
+        
+        .time-bar-準備中 {
+            background-color: rgba(155, 89, 182, 0.7);
+        }
+        
+        .time-bar-調理開始 {
+            background-color: rgba(241, 196, 15, 0.7);
+        }
+        
+        .time-bar-調理完了 {
+            background-color: rgba(230, 126, 34, 0.7);
+        }
+        
+        .time-bar-提供待ち {
+            background-color: rgba(46, 204, 113, 0.7);
+        }
+        
+        .time-bar-legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 4px;
+        }
+        
+        .detailed-analysis {
+            margin-top: 30px;
+        }
+        
+        .expand-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .expand-button:hover {
+            color: var(--primary-hover);
+        }
+        
+        .order-details {
+            display: none;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.02);
+            border-radius: var(--border-radius);
+            margin-top: 10px;
+        }
+        
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .details-table th {
+            background-color: rgba(67, 97, 238, 0.1);
+            padding: 8px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .details-table td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .status-bar-container {
+            display: flex;
+            height: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            margin-top: 10px;
+            position: relative;
+        }
+        
+        .status-bar-segment {
+            height: 15px;
+            transition: width 0.5s ease;
+        }
+        
+        .status-timeline {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.7rem;
+            color: var(--text-light);
+        }
+        
+        .status-milestone {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+        
+        .status-milestone::before {
+            content: '|';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>処理時間分析</h1>
+        
+        <div class="navigation-bar">
+            <a href="index.html" class="admin-link"><i class="fas fa-home"></i> ホームに戻る</a>
+            <a href="orders.html" class="admin-link"><i class="fas fa-list-alt"></i> 注文一覧</a>
+            <a href="analytics.html" class="admin-link"><i class="fas fa-chart-line"></i> 注文分析</a>
+        </div>
+        
+        <div class="date-range-selector">
+            <label for="start-date">期間:</label>
+            <input type="date" id="start-date">
+            <span>から</span>
+            <input type="date" id="end-date">
+            <span>まで</span>
+            <button id="apply-date-range">適用</button>
+            <button id="today-button">今日</button>
+            <button id="this-week-button">今週</button>
+            <button id="this-month-button">今月</button>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">工程別平均所要時間（単位: 分）</div>
+            <canvas id="process-time-chart"></canvas>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">注文別工程タイムライン</div>
+            <canvas id="order-timeline-chart"></canvas>
+            <div class="time-bar-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(52, 152, 219, 0.7);"></div>
+                    <span>受付</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(155, 89, 182, 0.7);"></div>
+                    <span>準備中</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(241, 196, 15, 0.7);"></div>
+                    <span>調理開始</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(230, 126, 34, 0.7);"></div>
+                    <span>調理完了</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(46, 204, 113, 0.7);"></div>
+                    <span>提供待ち</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="order-filter">
+            <label for="status-filter">ステータスフィルター:</label>
+            <select id="status-filter">
+                <option value="all">すべてのステータス</option>
+                <option value="提供済み">提供済み</option>
+                <option value="提供待ち">提供待ち</option>
+                <option value="調理完了">調理完了</option>
+                <option value="調理開始">調理開始</option>
+                <option value="準備中">準備中</option>
+                <option value="受付">受付</option>
+                <option value="キャンセル">キャンセル</option>
+            </select>
+            
+            <label for="table-filter">テーブルフィルター:</label>
+            <select id="table-filter">
+                <option value="all">すべてのテーブル</option>
+                <!-- テーブルオプションは動的に追加されます -->
+            </select>
+            
+            <label for="sort-by">並び替え:</label>
+            <select id="sort-by">
+                <option value="newest">注文日時（新しい順）</option>
+                <option value="oldest">注文日時（古い順）</option>
+                <option value="total-time-desc">合計処理時間（長い順）</option>
+                <option value="total-time-asc">合計処理時間（短い順）</option>
+            </select>
+            
+            <button id="apply-filters">適用</button>
+        </div>
+        
+        <div class="order-list">
+            <h2 class="order-list-title">注文別処理時間 <span class="order-count" id="order-count">0</span></h2>
+            <table class="order-table" id="order-table">
+                <thead>
+                    <tr>
+                        <th>注文ID</th>
+                        <th>テーブル</th>
+                        <th>注文日時</th>
+                        <th>ステータス</th>
+                        <th>合計時間</th>
+                        <th>工程毎の所要時間（分）</th>
+                        <th>詳細</th>
+                    </tr>
+                </thead>
+                <tbody id="order-table-body">
+                    <!-- ここに注文データが挿入されます -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM要素
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            const applyButton = document.getElementById('apply-date-range');
+            const todayButton = document.getElementById('today-button');
+            const thisWeekButton = document.getElementById('this-week-button');
+            const thisMonthButton = document.getElementById('this-month-button');
+            const orderCountElement = document.getElementById('order-count');
+            const orderTableBody = document.getElementById('order-table-body');
+            const statusFilterSelect = document.getElementById('status-filter');
+            const tableFilterSelect = document.getElementById('table-filter');
+            const sortBySelect = document.getElementById('sort-by');
+            const applyFiltersButton = document.getElementById('apply-filters');
+            
+            // フィルター状態
+            let currentStatusFilter = 'all';
+            let currentTableFilter = 'all';
+            let currentSortBy = 'newest';
+            
+            // 日付のデフォルト設定（今日）
+            const today = new Date();
+            const formattedToday = today.toISOString().split('T')[0];
+            endDateInput.value = formattedToday;
+            
+            // 7日前をデフォルトの開始日に
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            startDateInput.value = weekAgo.toISOString().split('T')[0];
+            
+            // オーダーデータベース操作関数
+            const OrderDB = {
+                // オーダー一覧の取得
+                getOrders: function() {
+                    const orders = localStorage.getItem('orders');
+                    return orders ? JSON.parse(orders) : [];
+                },
+                
+                // オーダーの履歴を取得
+                getOrderStatusHistory: function(orderId) {
+                    const order = this.getOrderById(orderId);
+                    if (order && order.statusHistory) {
+                        return order.statusHistory;
+                    }
+                    return [];
+                },
+                
+                // 特定のオーダーの取得
+                getOrderById: function(orderId) {
+                    const orders = this.getOrders();
+                    return orders.find(order => order.id === orderId) || null;
+                }
+            };
+            
+            // 日付の間にあるかをチェック
+            function isInDateRange(timestamp, startDate, endDate) {
+                const date = new Date(timestamp);
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // 終了日の終わりまで
+                
+                return date >= start && date <= end;
+            }
+            
+            // ステップ間の所要時間を計算（分単位）
+            function calculateProcessingTime(history, fromStatus, toStatus) {
+                if (!history || history.length === 0) return null;
+                
+                // fromStatusに変更された履歴エントリを検索
+                let fromEntry = null;
+                for (let i = 0; i < history.length; i++) {
+                    if (history[i].to === fromStatus) {
+                        fromEntry = history[i];
+                        break;
+                    }
+                }
+                
+                // toStatusに変更された履歴エントリを検索
+                let toEntry = null;
+                for (let i = 0; i < history.length; i++) {
+                    if (history[i].to === toStatus) {
+                        toEntry = history[i];
+                        break;
+                    }
+                }
+                
+                if (!fromEntry || !toEntry) return null;
+                
+                const fromTime = new Date(fromEntry.timestamp);
+                const toTime = new Date(toEntry.timestamp);
+                
+                // 分単位の差分を計算
+                return (toTime - fromTime) / (1000 * 60);
+            }
+            
+            // 工程ごとの所要時間を計算
+            function calculateOrderProcessTimes(order) {
+                if (!order.statusHistory || !Array.isArray(order.statusHistory) || order.statusHistory.length < 2) {
+                    return null;
+                }
+                
+                // ステータス履歴をタイムスタンプでソート
+                const sortedHistory = [...order.statusHistory].sort((a, b) => 
+                    new Date(a.timestamp) - new Date(b.timestamp)
+                );
+                
+                // 各ステータスの開始時刻と終了時刻を取得
+                const statusTimes = {};
+                let previousStatus = null;
+                let previousTime = null;
+                
+                // 最初の受付状態を設定
+                statusTimes['受付'] = {
+                    start: new Date(order.timestamp),
+                    end: null
+                };
+                
+                for (const entry of sortedHistory) {
+                    const currentTime = new Date(entry.timestamp);
+                    
+                    // 前のステータスの終了時刻を設定
+                    if (entry.from && !statusTimes[entry.from]) {
+                        statusTimes[entry.from] = { start: null, end: null };
+                    }
+                    
+                    if (entry.from) {
+                        statusTimes[entry.from].end = currentTime;
+                    }
+                    
+                    // 現在のステータスの開始時刻を設定
+                    if (!statusTimes[entry.to]) {
+                        statusTimes[entry.to] = { start: currentTime, end: null };
+                    } else if (!statusTimes[entry.to].start) {
+                        statusTimes[entry.to].start = currentTime;
+                    }
+                    
+                    previousStatus = entry.to;
+                    previousTime = currentTime;
+                }
+                
+                // 最後のステータスの終了時刻が設定されていなければ現在時刻を設定
+                if (previousStatus && statusTimes[previousStatus] && !statusTimes[previousStatus].end) {
+                    statusTimes[previousStatus].end = new Date();
+                }
+                
+                // 各ステータスの所要時間を計算（分単位）
+                const processTimes = {};
+                let totalTime = 0;
+                
+                for (const [status, times] of Object.entries(statusTimes)) {
+                    if (times.start && times.end) {
+                        const duration = (times.end - times.start) / (1000 * 60);
+                        processTimes[status] = duration;
+                        totalTime += duration;
+                    } else {
+                        processTimes[status] = 0;
+                    }
+                }
+                
+                return {
+                    statusTimes,
+                    processTimes,
+                    totalTime
+                };
+            }
+            
+            // 工程別平均所要時間の計算
+            function calculateAverageProcessTimes(orders) {
+                const statusCounts = {};
+                const statusTotals = {};
+                
+                orders.forEach(order => {
+                    const processTimes = calculateOrderProcessTimes(order);
+                    if (!processTimes) return;
+                    
+                    for (const [status, time] of Object.entries(processTimes.processTimes)) {
+                        if (!statusCounts[status]) {
+                            statusCounts[status] = 0;
+                            statusTotals[status] = 0;
+                        }
+                        
+                        if (time > 0) {
+                            statusCounts[status]++;
+                            statusTotals[status] += time;
+                        }
+                    }
+                });
+                
+                // 平均値の計算
+                const averageTimes = {};
+                for (const status of ['受付', '準備中', '調理開始', '調理完了', '提供待ち', '提供済み']) {
+                    if (statusCounts[status] && statusCounts[status] > 0) {
+                        averageTimes[status] = statusTotals[status] / statusCounts[status];
+                    } else {
+                        averageTimes[status] = 0;
+                    }
+                }
+                
+                return {
+                    labels: Object.keys(averageTimes),
+                    data: Object.values(averageTimes)
+                };
+            }
+            
+            // 注文のフィルタリングと並べ替え
+            function filterAndSortOrders(orders, statusFilter, tableFilter, sortBy) {
+                // フィルタリング
+                let filteredOrders = [...orders];
+                
+                if (statusFilter !== 'all') {
+                    filteredOrders = filteredOrders.filter(order => order.status === statusFilter);
+                }
+                
+                if (tableFilter !== 'all') {
+                    filteredOrders = filteredOrders.filter(order => order.tableId === tableFilter);
+                }
+                
+                // 並べ替え
+                switch(sortBy) {
+                    case 'newest':
+                        filteredOrders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        break;
+                    case 'oldest':
+                        filteredOrders.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                        break;
+                    case 'total-time-desc':
+                        filteredOrders.sort((a, b) => {
+                            const aProcessTimes = calculateOrderProcessTimes(a);
+                            const bProcessTimes = calculateOrderProcessTimes(b);
+                            const aTotal = aProcessTimes ? aProcessTimes.totalTime : 0;
+                            const bTotal = bProcessTimes ? bProcessTimes.totalTime : 0;
+                            return bTotal - aTotal;
+                        });
+                        break;
+                    case 'total-time-asc':
+                        filteredOrders.sort((a, b) => {
+                            const aProcessTimes = calculateOrderProcessTimes(a);
+                            const bProcessTimes = calculateOrderProcessTimes(b);
+                            const aTotal = aProcessTimes ? aProcessTimes.totalTime : 0;
+                            const bTotal = bProcessTimes ? bProcessTimes.totalTime : 0;
+                            return aTotal - bTotal;
+                        });
+                        break;
+                }
+                
+                return filteredOrders;
+            }
+            
+            // 利用可能なテーブルの取得
+            function getAvailableTables(orders) {
+                const tables = new Set();
+                orders.forEach(order => {
+                    if (order.tableId) {
+                        tables.add(order.tableId);
+                    }
+                });
+                return Array.from(tables).sort();
+            }
+            
+            // テーブルフィルターの更新
+            function updateTableFilter(orders) {
+                const tables = getAvailableTables(orders);
+                
+                // 既存のオプションをクリア（allオプション以外）
+                const existingOptions = tableFilterSelect.querySelectorAll('option:not([value="all"])');
+                existingOptions.forEach(option => option.remove());
+                
+                // 新しいオプションを追加
+                tables.forEach(table => {
+                    const option = document.createElement('option');
+                    option.value = table;
+                    option.textContent = `テーブル ${table}`;
+                    tableFilterSelect.appendChild(option);
+                });
+            }
+            
+            // 工程時間棒グラフの描画
+            function renderProcessTimeChart(orders) {
+                const processTimeData = calculateAverageProcessTimes(orders);
+                const ctx = document.getElementById('process-time-chart').getContext('2d');
+                
+                if (window.processTimeChart) {
+                    window.processTimeChart.destroy();
+                }
+                
+                window.processTimeChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: processTimeData.labels,
+                        datasets: [{
+                            label: '平均所要時間（分）',
+                            data: processTimeData.data,
+                            backgroundColor: [
+                                'rgba(52, 152, 219, 0.7)',
+                                'rgba(155, 89, 182, 0.7)',
+                                'rgba(241, 196, 15, 0.7)',
+                                'rgba(230, 126, 34, 0.7)',
+                                'rgba(46, 204, 113, 0.7)',
+                                'rgba(149, 165, 166, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(52, 152, 219, 1)',
+                                'rgba(155, 89, 182, 1)',
+                                'rgba(241, 196, 15, 1)',
+                                'rgba(230, 126, 34, 1)',
+                                'rgba(46, 204, 113, 1)',
+                                'rgba(149, 165, 166, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: '分'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 注文タイムラインチャートの描画
+            function renderOrderTimelineChart(orders) {
+                const ctx = document.getElementById('order-timeline-chart').getContext('2d');
+                
+                // 最新の10件の注文を選択
+                const recentOrders = [...orders]
+                    .filter(order => order.statusHistory && order.statusHistory.length > 0)
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, 10)
+                    .reverse(); // チャートの下から表示するため逆順にする
+                
+                if (recentOrders.length === 0) {
+                    if (window.orderTimelineChart) {
+                        window.orderTimelineChart.destroy();
+                    }
+                    return;
+                }
+                
+                const datasets = [];
+                const orderLabels = recentOrders.map(order => `${order.tableId} (${order.id.substring(0, 8)})`);
+                
+                // 各ステータスのデータセットを作成
+                const statuses = ['受付', '準備中', '調理開始', '調理完了', '提供待ち'];
+                const statusColors = {
+                    '受付': 'rgba(52, 152, 219, 0.7)',
+                    '準備中': 'rgba(155, 89, 182, 0.7)',
+                    '調理開始': 'rgba(241, 196, 15, 0.7)',
+                    '調理完了': 'rgba(230, 126, 34, 0.7)',
+                    '提供待ち': 'rgba(46, 204, 113, 0.7)'
+                };
+                
+                statuses.forEach(status => {
+                    const data = recentOrders.map(order => {
+                        const processTimes = calculateOrderProcessTimes(order);
+                        return processTimes && processTimes.processTimes[status] ? processTimes.processTimes[status] : 0;
+                    });
+                    
+                    datasets.push({
+                        label: status,
+                        data: data,
+                        backgroundColor: statusColors[status],
+                        borderColor: statusColors[status],
+                        borderWidth: 1
+                    });
+                });
+                
+                if (window.orderTimelineChart) {
+                    window.orderTimelineChart.destroy();
+                }
+                
+                window.orderTimelineChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: orderLabels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                stacked: true
+                            },
+                            y: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                    text: '分'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.dataset.label || '';
+                                        const value = context.raw;
+                                        return `${label}: ${value.toFixed(1)}分`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 注文テーブルの描画
+            function renderOrderTable(orders) {
+                orderTableBody.innerHTML = '';
+                orderCountElement.textContent = orders.length;
+                
+                // データがない場合
+                if (orders.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+                    cell.colSpan = 7;
+                    cell.textContent = 'データがありません';
+                    cell.style.textAlign = 'center';
+                    cell.style.padding = '30px';
+                    row.appendChild(cell);
+                    orderTableBody.appendChild(row);
+                    return;
+                }
+                
+                // 各注文の行を作成
+                orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    
+                    // 注文ID
+                    const idCell = document.createElement('td');
+                    idCell.textContent = order.id;
+                    row.appendChild(idCell);
+                    
+                    // テーブル
+                    const tableCell = document.createElement('td');
+                    tableCell.textContent = order.tableId;
+                    row.appendChild(tableCell);
+                    
+                    // 注文日時
+                    const dateCell = document.createElement('td');
+                    const orderDate = new Date(order.timestamp);
+                    dateCell.textContent = orderDate.toLocaleString('ja-JP');
+                    row.appendChild(dateCell);
+                    
+                    // ステータス
+                    const statusCell = document.createElement('td');
+                    statusCell.textContent = order.status;
+                    row.appendChild(statusCell);
+                    
+                    // 処理時間データを計算
+                    const processTimes = calculateOrderProcessTimes(order);
+                    
+                    // 合計時間
+                    const totalTimeCell = document.createElement('td');
+                    totalTimeCell.classList.add('time-cell');
+                    
+                    if (processTimes) {
+                        const totalMinutes = processTimes.totalTime;
+                        totalTimeCell.textContent = totalMinutes.toFixed(1) + '分';
+                        
+                        // 長い時間の場合は警告表示
+                        if (totalMinutes > 30) {
+                            totalTimeCell.classList.add('warning-time');
+                        }
+                        if (totalMinutes > 60) {
+                            totalTimeCell.classList.add('critical-time');
+                        }
+                    } else {
+                        totalTimeCell.textContent = '-';
+                    }
+                    row.appendChild(totalTimeCell);
+                    
+                    // 工程毎の時間バー
+                    const timeBarCell = document.createElement('td');
+                    
+                    if (processTimes) {
+                        const timeBar = document.createElement('div');
+                        timeBar.classList.add('time-bars');
+                        
+                        // 各ステータスの所要時間を取得
+                        const statusTimes = {
+                            '受付': processTimes.processTimes['受付'] || 0,
+                            '準備中': processTimes.processTimes['準備中'] || 0,
+                            '調理開始': processTimes.processTimes['調理開始'] || 0,
+                            '調理完了': processTimes.processTimes['調理完了'] || 0,
+                            '提供待ち': processTimes.processTimes['提供待ち'] || 0
+                        };
+                        
+                        // 合計時間を計算して各ステータスの割合を計算
+                        const totalTime = Object.values(statusTimes).reduce((sum, time) => sum + time, 0);
+                        
+                        // 各ステータスのバーを作成
+                        Object.entries(statusTimes).forEach(([status, time]) => {
+                            if (time > 0) {
+                                const percentage = (time / totalTime) * 100;
+                                
+                                const bar = document.createElement('div');
+                                bar.classList.add('time-bar', `time-bar-${status}`);
+                                bar.style.width = `${percentage}%`;
+                                bar.title = `${status}: ${time.toFixed(1)}分 (${percentage.toFixed(1)}%)`;
+                                
+                                timeBar.appendChild(bar);
+                            }
+                        });
+                        
+                        timeBarCell.appendChild(timeBar);
+                    } else {
+                        timeBarCell.textContent = 'データなし';
+                    }
+                    row.appendChild(timeBarCell);
+                    
+                    // 詳細ボタン
+                    const detailsCell = document.createElement('td');
+                    if (order.statusHistory && order.statusHistory.length > 0) {
+                        const expandButton = document.createElement('button');
+                        expandButton.classList.add('expand-button');
+                        expandButton.innerHTML = '<i class="fas fa-chevron-down"></i> 詳細';
+                        expandButton.onclick = () => toggleDetails(order, expandButton);
+                        detailsCell.appendChild(expandButton);
+                    } else {
+                        detailsCell.textContent = '履歴なし';
+                    }
+                    row.appendChild(detailsCell);
+                    
+                    // 行をテーブルに追加
+                    orderTableBody.appendChild(row);
+                    
+                    // 詳細行を作成（最初は非表示）
+                    const detailsRow = document.createElement('tr');
+                    detailsRow.id = `details-${order.id}`;
+                    detailsRow.style.display = 'none';
+                    
+                    const detailsCell = document.createElement('td');
+                    detailsCell.colSpan = 7;
+                    
+                    const detailsContent = document.createElement('div');
+                    detailsContent.classList.add('order-details');
+                    detailsContent.style.display = 'block';
+                    
+                    if (order.statusHistory && order.statusHistory.length > 0) {
+                        // ステータス履歴テーブル
+                        const historyTable = document.createElement('table');
+                        historyTable.classList.add('details-table');
+                        
+                        const headerRow = document.createElement('tr');
+                        ['日時', '変更前', '変更後', '経過時間'].forEach(text => {
+                            const th = document.createElement('th');
+                            th.textContent = text;
+                            headerRow.appendChild(th);
+                        });
+                        historyTable.appendChild(headerRow);
+                        
+                        // 履歴エントリをタイムスタンプでソート
+                        const sortedHistory = [...order.statusHistory].sort((a, b) => 
+                            new Date(a.timestamp) - new Date(b.timestamp)
+                        );
+                        
+                        let previousTime = new Date(order.timestamp);
+                        
+                        sortedHistory.forEach((entry, index) => {
+                            const row = document.createElement('tr');
+                            
+                            // 日時
+                            const timeCell = document.createElement('td');
+                            const entryTime = new Date(entry.timestamp);
+                            timeCell.textContent = entryTime.toLocaleString('ja-JP');
+                            row.appendChild(timeCell);
+                            
+                            // 変更前
+                            const fromCell = document.createElement('td');
+                            fromCell.textContent = entry.from || '初期状態';
+                            row.appendChild(fromCell);
+                            
+                            // 変更後
+                            const toCell = document.createElement('td');
+                            toCell.textContent = entry.to;
+                            row.appendChild(toCell);
+                            
+                            // 経過時間
+                            const elapsedCell = document.createElement('td');
+                            const elapsedMinutes = (entryTime - previousTime) / (1000 * 60);
+                            elapsedCell.textContent = elapsedMinutes.toFixed(1) + '分';
+                            row.appendChild(elapsedCell);
+                            
+                            historyTable.appendChild(row);
+                            previousTime = entryTime;
+                        });
+                        
+                        detailsContent.appendChild(historyTable);
+                        
+                        // ステータスタイムラインの作成
+                        if (processTimes && processTimes.statusTimes) {
+                            const timelineContainer = document.createElement('div');
+                            timelineContainer.innerHTML = '<h4>ステータスタイムライン</h4>';
+                            
+                            const barContainer = document.createElement('div');
+                            barContainer.classList.add('status-bar-container');
+                            
+                            // 注文の開始時刻と最後の履歴の時刻の差を計算（総時間）
+                            const orderStartTime = new Date(order.timestamp);
+                            const lastHistoryEntry = sortedHistory[sortedHistory.length - 1];
+                            const orderEndTime = lastHistoryEntry ? new Date(lastHistoryEntry.timestamp) : new Date();
+                            const totalDuration = orderEndTime - orderStartTime;
+                            
+                            // 各ステータスの時間セグメントを作成
+                            let previousStatus = null;
+                            let previousTimePoint = orderStartTime;
+                            let statusSequence = ['受付'];
+                            
+                            sortedHistory.forEach(entry => {
+                                statusSequence.push(entry.to);
+                                
+                                if (entry.from) {
+                                    const entryTime = new Date(entry.timestamp);
+                                    const segmentDuration = entryTime - previousTimePoint;
+                                    const segmentWidth = (segmentDuration / totalDuration) * 100;
+                                    
+                                    const segment = document.createElement('div');
+                                    segment.classList.add('status-bar-segment');
+                                    segment.style.width = `${segmentWidth}%`;
+                                    segment.style.backgroundColor = statusColors[entry.from] || 'rgba(149, 165, 166, 0.7)';
+                                    segment.title = `${entry.from}: ${(segmentDuration / (1000 * 60)).toFixed(1)}分`;
+                                    
+                                    barContainer.appendChild(segment);
+                                    
+                                    previousTimePoint = entryTime;
+                                }
+                            });
+                            
+                            // 最後のステータスのセグメントを追加
+                            if (lastHistoryEntry) {
+                                const lastStatus = lastHistoryEntry.to;
+                                const now = new Date();
+                                const lastSegmentDuration = now - new Date(lastHistoryEntry.timestamp);
+                                const lastSegmentWidth = (lastSegmentDuration / totalDuration) * 100;
+                                
+                                const lastSegment = document.createElement('div');
+                                lastSegment.classList.add('status-bar-segment');
+                                lastSegment.style.width = `${lastSegmentWidth}%`;
+                                lastSegment.style.backgroundColor = statusColors[lastStatus] || 'rgba(149, 165, 166, 0.7)';
+                                lastSegment.title = `${lastStatus}: ${(lastSegmentDuration / (1000 * 60)).toFixed(1)}分`;
+                                
+                                barContainer.appendChild(lastSegment);
+                            }
+                            
+                            timelineContainer.appendChild(barContainer);
+                            
+                            // マイルストーンの追加
+                            const timeline = document.createElement('div');
+                            timeline.classList.add('status-timeline');
+                            
+                            // 順序のユニークな配列を作成
+                            const uniqueStatusSequence = [...new Set(statusSequence)];
+                            
+                            uniqueStatusSequence.forEach(status => {
+                                const milestone = document.createElement('div');
+                                milestone.classList.add('status-milestone');
+                                milestone.textContent = status;
+                                timeline.appendChild(milestone);
+                            });
+                            
+                            timelineContainer.appendChild(timeline);
+                            detailsContent.appendChild(timelineContainer);
+                        }
+                    } else {
+                        detailsContent.textContent = 'ステータス履歴がありません';
+                    }
+                    
+                    detailsCell.appendChild(detailsContent);
+                    detailsRow.appendChild(detailsCell);
+                    orderTableBody.appendChild(detailsRow);
+                });
+            }
+            
+            // 詳細表示の切り替え
+            function toggleDetails(order, button) {
+                const detailsRow = document.getElementById(`details-${order.id}`);
+                if (detailsRow.style.display === 'none') {
+                    detailsRow.style.display = 'table-row';
+                    button.innerHTML = '<i class="fas fa-chevron-up"></i> 閉じる';
+                } else {
+                    detailsRow.style.display = 'none';
+                    button.innerHTML = '<i class="fas fa-chevron-down"></i> 詳細';
+                }
+            }
+            
+            // データの更新と表示
+            function updateData() {
+                const startDate = startDateInput.value;
+                const endDate = endDateInput.value;
+                
+                if (!startDate || !endDate) {
+                    alert('日付を選択してください');
+                    return;
+                }
+                
+                if (new Date(startDate) > new Date(endDate)) {
+                    alert('開始日は終了日より前の日付を選択してください');
+                    return;
+                }
+                
+                // 全注文を取得
+                const allOrders = OrderDB.getOrders();
+                
+                // 期間内の注文をフィルタリング
+                const ordersInRange = allOrders.filter(order => 
+                    isInDateRange(order.timestamp, startDate, endDate)
+                );
+                
+                // テーブルフィルターの更新
+                updateTableFilter(ordersInRange);
+                
+                // 現在のフィルターで注文をフィルタリング
+                const filteredOrders = filterAndSortOrders(
+                    ordersInRange,
+                    currentStatusFilter,
+                    currentTableFilter,
+                    currentSortBy
+                );
+                
+                // チャートとテーブルを更新
+                renderProcessTimeChart(filteredOrders);
+                renderOrderTimelineChart(filteredOrders);
+                renderOrderTable(filteredOrders);
+            }
+            
+            // 日付範囲ボタンのイベントリスナー
+            applyButton.addEventListener('click', updateData);
+            
+            todayButton.addEventListener('click', () => {
+                startDateInput.value = formattedToday;
+                endDateInput.value = formattedToday;
+                updateData();
+            });
+            
+            thisWeekButton.addEventListener('click', () => {
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay()); // 今週の日曜日
+                startDateInput.value = weekStart.toISOString().split('T')[0];
+                endDateInput.value = formattedToday;
+                updateData();
+            });
+            
+            thisMonthButton.addEventListener('click', () => {
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                startDateInput.value = monthStart.toISOString().split('T')[0];
+                endDateInput.value = formattedToday;
+                updateData();
+            });
+            
+            // フィルタリングボタンのイベントリスナー
+            applyFiltersButton.addEventListener('click', () => {
+                currentStatusFilter = statusFilterSelect.value;
+                currentTableFilter = tableFilterSelect.value;
+                currentSortBy = sortBySelect.value;
+                updateData();
+            });
+            
+            // 初期表示
+            updateData();
+        });
+    </script>
+</body>
+</html>

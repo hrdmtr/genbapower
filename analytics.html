@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注文分析 - QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            background-color: var(--card-color);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+        }
+        
+        .chart-container:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .chart-row {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-col {
+            flex: 1;
+        }
+        
+        .date-range-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.02);
+            padding: 15px;
+            border-radius: var(--border-radius);
+        }
+        
+        .date-range-selector label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+        
+        .date-range-selector input {
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            font-family: inherit;
+        }
+        
+        .date-range-selector button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        
+        .date-range-selector button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .analytics-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .analytics-card {
+            background-color: var(--card-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--box-shadow);
+            text-align: center;
+            transition: var(--transition);
+        }
+        
+        .analytics-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .analytics-card-title {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+        
+        .analytics-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .analytics-card-unit {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>注文分析</h1>
+        
+        <div class="navigation-bar">
+            <a href="index.html" class="admin-link"><i class="fas fa-home"></i> ホームに戻る</a>
+            <a href="orders.html" class="admin-link"><i class="fas fa-list-alt"></i> 注文一覧</a>
+            <a href="time_analysis.html" class="admin-link"><i class="fas fa-stopwatch"></i> 処理時間分析</a>
+        </div>
+        
+        <div class="date-range-selector">
+            <label for="start-date">期間:</label>
+            <input type="date" id="start-date">
+            <span>から</span>
+            <input type="date" id="end-date">
+            <span>まで</span>
+            <button id="apply-date-range">適用</button>
+            <button id="today-button">今日</button>
+            <button id="this-week-button">今週</button>
+            <button id="this-month-button">今月</button>
+        </div>
+        
+        <div class="analytics-summary">
+            <div class="analytics-card">
+                <div class="analytics-card-title">総注文数</div>
+                <div class="analytics-card-value" id="total-orders">0</div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-card-title">合計売上</div>
+                <div class="analytics-card-value" id="total-sales">¥0</div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-card-title">平均注文単価</div>
+                <div class="analytics-card-value" id="avg-order-value">¥0</div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-card-title">平均処理時間</div>
+                <div class="analytics-card-value" id="avg-processing-time">0</div>
+                <div class="analytics-card-unit">分</div>
+            </div>
+        </div>
+        
+        <div class="chart-row">
+            <div class="chart-col">
+                <div class="chart-container">
+                    <div class="chart-title">工程別平均所要時間</div>
+                    <canvas id="process-time-chart"></canvas>
+                </div>
+            </div>
+            <div class="chart-col">
+                <div class="chart-container">
+                    <div class="chart-title">時間帯別注文数</div>
+                    <canvas id="hourly-orders-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-row">
+            <div class="chart-col">
+                <div class="chart-container">
+                    <div class="chart-title">商品別注文数</div>
+                    <canvas id="product-orders-chart"></canvas>
+                </div>
+            </div>
+            <div class="chart-col">
+                <div class="chart-container">
+                    <div class="chart-title">日別注文推移</div>
+                    <canvas id="daily-orders-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM要素
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            const applyButton = document.getElementById('apply-date-range');
+            const todayButton = document.getElementById('today-button');
+            const thisWeekButton = document.getElementById('this-week-button');
+            const thisMonthButton = document.getElementById('this-month-button');
+            const totalOrdersElement = document.getElementById('total-orders');
+            const totalSalesElement = document.getElementById('total-sales');
+            const avgOrderValueElement = document.getElementById('avg-order-value');
+            const avgProcessingTimeElement = document.getElementById('avg-processing-time');
+            
+            // 日付のデフォルト設定（今日）
+            const today = new Date();
+            const formattedToday = today.toISOString().split('T')[0];
+            endDateInput.value = formattedToday;
+            
+            // 7日前をデフォルトの開始日に
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            startDateInput.value = weekAgo.toISOString().split('T')[0];
+            
+            // ボタンイベントリスナー
+            todayButton.addEventListener('click', () => {
+                startDateInput.value = formattedToday;
+                endDateInput.value = formattedToday;
+                updateAnalytics();
+            });
+            
+            thisWeekButton.addEventListener('click', () => {
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay()); // 今週の日曜日
+                startDateInput.value = weekStart.toISOString().split('T')[0];
+                endDateInput.value = formattedToday;
+                updateAnalytics();
+            });
+            
+            thisMonthButton.addEventListener('click', () => {
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                startDateInput.value = monthStart.toISOString().split('T')[0];
+                endDateInput.value = formattedToday;
+                updateAnalytics();
+            });
+            
+            applyButton.addEventListener('click', updateAnalytics);
+            
+            // オーダーデータベース操作関数
+            const OrderDB = {
+                // オーダー一覧の取得
+                getOrders: function() {
+                    const orders = localStorage.getItem('orders');
+                    return orders ? JSON.parse(orders) : [];
+                },
+                
+                // オーダーの履歴を取得
+                getOrderStatusHistory: function(orderId) {
+                    const order = this.getOrderById(orderId);
+                    if (order && order.statusHistory) {
+                        return order.statusHistory;
+                    }
+                    return [];
+                },
+                
+                // 特定のオーダーの取得
+                getOrderById: function(orderId) {
+                    const orders = this.getOrders();
+                    return orders.find(order => order.id === orderId) || null;
+                }
+            };
+            
+            // 日付の間にあるかをチェック
+            function isInDateRange(timestamp, startDate, endDate) {
+                const date = new Date(timestamp);
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // 終了日の終わりまで
+                
+                return date >= start && date <= end;
+            }
+            
+            // ステップ間の所要時間を計算（分単位）
+            function calculateProcessingTime(history, fromStatus, toStatus) {
+                if (!history || history.length === 0) return null;
+                
+                const fromEntry = history.find(entry => entry.to === fromStatus);
+                const toEntry = history.find(entry => entry.to === toStatus);
+                
+                if (!fromEntry || !toEntry) return null;
+                
+                const fromTime = new Date(fromEntry.timestamp);
+                const toTime = new Date(toEntry.timestamp);
+                
+                // 分単位の差分を計算
+                return (toTime - fromTime) / (1000 * 60);
+            }
+            
+            // 時間帯別の注文数カウント
+            function countOrdersByHour(orders) {
+                const hourCounts = Array(24).fill(0);
+                
+                orders.forEach(order => {
+                    const orderDate = new Date(order.timestamp);
+                    const hour = orderDate.getHours();
+                    hourCounts[hour]++;
+                });
+                
+                return hourCounts;
+            }
+            
+            // 日別の注文数カウント
+            function countOrdersByDay(orders, startDate, endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const days = [];
+                const dayCounts = [];
+                
+                // 日付の範囲を生成
+                for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+                    const dateString = day.toISOString().split('T')[0];
+                    days.push(dateString);
+                    dayCounts.push(0);
+                }
+                
+                // 各注文の日付をカウント
+                orders.forEach(order => {
+                    const orderDate = new Date(order.timestamp);
+                    const dateString = orderDate.toISOString().split('T')[0];
+                    const index = days.indexOf(dateString);
+                    if (index !== -1) {
+                        dayCounts[index]++;
+                    }
+                });
+                
+                // 短い日付形式に変換（月/日）
+                const shortDays = days.map(dateString => {
+                    const date = new Date(dateString);
+                    return `${date.getMonth()+1}/${date.getDate()}`;
+                });
+                
+                return { labels: shortDays, data: dayCounts };
+            }
+            
+            // 商品別の注文数カウント
+            function countOrdersByProduct(orders) {
+                const productCounts = {};
+                
+                orders.forEach(order => {
+                    if (!order.items || !Array.isArray(order.items)) return;
+                    
+                    order.items.forEach(item => {
+                        if (!productCounts[item.name]) {
+                            productCounts[item.name] = 0;
+                        }
+                        productCounts[item.name]++;
+                    });
+                });
+                
+                // 並べ替えて上位10件を取得
+                const sortedProducts = Object.entries(productCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10);
+                
+                return {
+                    labels: sortedProducts.map(entry => entry[0]),
+                    data: sortedProducts.map(entry => entry[1])
+                };
+            }
+            
+            // 工程別の平均所要時間を計算
+            function calculateAverageProcessTimes(orders) {
+                const processTimes = {
+                    '受付→準備中': [],
+                    '準備中→調理開始': [],
+                    '調理開始→調理完了': [],
+                    '調理完了→提供待ち': [],
+                    '提供待ち→提供済み': []
+                };
+                
+                // 完了した注文のみを対象にする
+                const completedOrders = orders.filter(order => order.status === '提供済み');
+                
+                completedOrders.forEach(order => {
+                    if (!order.statusHistory || !Array.isArray(order.statusHistory)) return;
+                    
+                    // 各工程の所要時間を計算
+                    const history = order.statusHistory;
+                    
+                    // 受付から準備中
+                    const t1 = calculateProcessingTime(history, '準備中', '調理開始');
+                    if (t1 !== null) processTimes['受付→準備中'].push(t1);
+                    
+                    // 準備中から調理開始
+                    const t2 = calculateProcessingTime(history, '調理開始', '調理完了');
+                    if (t2 !== null) processTimes['準備中→調理開始'].push(t2);
+                    
+                    // 調理開始から調理完了
+                    const t3 = calculateProcessingTime(history, '調理完了', '提供待ち');
+                    if (t3 !== null) processTimes['調理開始→調理完了'].push(t3);
+                    
+                    // 調理完了から提供待ち
+                    const t4 = calculateProcessingTime(history, '提供待ち', '提供済み');
+                    if (t4 !== null) processTimes['調理完了→提供待ち'].push(t4);
+                    
+                    // 提供待ちから提供済み
+                    const t5 = calculateProcessingTime(history, '提供済み', null);
+                    if (t5 !== null) processTimes['提供待ち→提供済み'].push(t5);
+                });
+                
+                // 平均値の計算
+                const averageProcessTimes = {};
+                Object.entries(processTimes).forEach(([process, times]) => {
+                    if (times.length > 0) {
+                        const sum = times.reduce((acc, val) => acc + val, 0);
+                        averageProcessTimes[process] = sum / times.length;
+                    } else {
+                        averageProcessTimes[process] = 0;
+                    }
+                });
+                
+                return {
+                    labels: Object.keys(averageProcessTimes),
+                    data: Object.values(averageProcessTimes)
+                };
+            }
+            
+            // 注文の総合分析
+            function analyzeOrders(startDate, endDate) {
+                const allOrders = OrderDB.getOrders();
+                
+                // 期間内の注文のみをフィルタリング
+                const ordersInRange = allOrders.filter(order => 
+                    isInDateRange(order.timestamp, startDate, endDate)
+                );
+                
+                // 注文数
+                const totalOrders = ordersInRange.length;
+                
+                // 合計売上（キャンセルは除く）
+                const totalSales = ordersInRange
+                    .filter(order => order.status !== 'キャンセル')
+                    .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+                
+                // 平均注文単価
+                const validOrders = ordersInRange.filter(order => order.status !== 'キャンセル' && order.totalAmount);
+                const avgOrderValue = validOrders.length > 0 
+                    ? totalSales / validOrders.length 
+                    : 0;
+                
+                // 平均処理時間（受付から提供済みまで）- 提供済みの注文のみ
+                const completedOrders = ordersInRange.filter(order => order.status === '提供済み');
+                let totalProcessingTime = 0;
+                let ordersWithCompleteHistory = 0;
+                
+                completedOrders.forEach(order => {
+                    if (order.statusHistory && order.statusHistory.length > 0) {
+                        const firstStatus = order.statusHistory[0];
+                        const lastStatus = order.statusHistory[order.statusHistory.length - 1];
+                        
+                        if (firstStatus && lastStatus) {
+                            const startTime = new Date(firstStatus.timestamp);
+                            const endTime = new Date(lastStatus.timestamp);
+                            const processingTimeMinutes = (endTime - startTime) / (1000 * 60);
+                            
+                            if (processingTimeMinutes > 0) {
+                                totalProcessingTime += processingTimeMinutes;
+                                ordersWithCompleteHistory++;
+                            }
+                        }
+                    }
+                });
+                
+                const avgProcessingTime = ordersWithCompleteHistory > 0 
+                    ? totalProcessingTime / ordersWithCompleteHistory 
+                    : 0;
+                
+                return {
+                    totalOrders,
+                    totalSales,
+                    avgOrderValue,
+                    avgProcessingTime,
+                    ordersInRange
+                };
+            }
+            
+            // チャートの表示
+            function renderCharts(ordersInRange, startDate, endDate) {
+                // 工程別平均所要時間チャート
+                const processTimeCtx = document.getElementById('process-time-chart').getContext('2d');
+                const processTimeData = calculateAverageProcessTimes(ordersInRange);
+                
+                if (window.processTimeChart) {
+                    window.processTimeChart.destroy();
+                }
+                
+                window.processTimeChart = new Chart(processTimeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: processTimeData.labels,
+                        datasets: [{
+                            label: '平均所要時間（分）',
+                            data: processTimeData.data,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: '分'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // 時間帯別注文数チャート
+                const hourlyCtx = document.getElementById('hourly-orders-chart').getContext('2d');
+                const hourlyData = countOrdersByHour(ordersInRange);
+                
+                if (window.hourlyChart) {
+                    window.hourlyChart.destroy();
+                }
+                
+                window.hourlyChart = new Chart(hourlyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: Array.from({length: 24}, (_, i) => `${i}時`),
+                        datasets: [{
+                            label: '注文数',
+                            data: hourlyData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // 商品別注文数チャート
+                const productCtx = document.getElementById('product-orders-chart').getContext('2d');
+                const productData = countOrdersByProduct(ordersInRange);
+                
+                if (window.productChart) {
+                    window.productChart.destroy();
+                }
+                
+                window.productChart = new Chart(productCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: productData.labels,
+                        datasets: [{
+                            data: productData.data,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)',
+                                'rgba(199, 199, 199, 0.7)',
+                                'rgba(83, 102, 255, 0.7)',
+                                'rgba(40, 159, 64, 0.7)',
+                                'rgba(210, 199, 199, 0.7)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right'
+                            }
+                        }
+                    }
+                });
+                
+                // 日別注文推移チャート
+                const dailyCtx = document.getElementById('daily-orders-chart').getContext('2d');
+                const dailyData = countOrdersByDay(ordersInRange, startDate, endDate);
+                
+                if (window.dailyChart) {
+                    window.dailyChart.destroy();
+                }
+                
+                window.dailyChart = new Chart(dailyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: dailyData.labels,
+                        datasets: [{
+                            label: '注文数',
+                            data: dailyData.data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 分析の更新
+            function updateAnalytics() {
+                const startDate = startDateInput.value;
+                const endDate = endDateInput.value;
+                
+                if (!startDate || !endDate) {
+                    alert('日付を選択してください');
+                    return;
+                }
+                
+                if (new Date(startDate) > new Date(endDate)) {
+                    alert('開始日は終了日より前の日付を選択してください');
+                    return;
+                }
+                
+                const analysis = analyzeOrders(startDate, endDate);
+                
+                // サマリー情報の更新
+                totalOrdersElement.textContent = analysis.totalOrders;
+                totalSalesElement.textContent = `¥${analysis.totalSales.toLocaleString()}`;
+                avgOrderValueElement.textContent = `¥${Math.round(analysis.avgOrderValue).toLocaleString()}`;
+                avgProcessingTimeElement.textContent = analysis.avgProcessingTime.toFixed(1);
+                
+                // チャートの更新
+                renderCharts(analysis.ordersInRange, startDate, endDate);
+            }
+            
+            // 初期表示
+            updateAnalytics();
+        });
+    </script>
+</body>
+</html>

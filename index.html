@@ -17,19 +17,53 @@
         <div class="connection-panel">
             <button id="connect-button" class="primary-button"><i class="fas fa-plug"></i> QRコードリーダーに接続</button>
             <div id="connection-status" class="status-indicator">未接続</div>
-            <a href="admin.html" class="admin-link"><i class="fas fa-cog"></i> 商品管理画面</a>
+            <div class="admin-links">
+                <a href="admin.html" class="admin-link"><i class="fas fa-cog"></i> 商品管理画面</a>
+                <a href="orders.html" class="admin-link"><i class="fas fa-list-alt"></i> 注文一覧</a>
+                <a href="analytics.html" class="admin-link"><i class="fas fa-chart-line"></i> 注文分析</a>
+                <a href="time_analysis.html" class="admin-link"><i class="fas fa-stopwatch"></i> 処理時間分析</a>
+            </div>
+        </div>
+        
+        <div class="order-status-panel">
+            <h2><i class="fas fa-receipt"></i> 注文状況</h2>
+            <div id="order-status" class="order-status">テーブルが選択されていません</div>
+            <div class="order-actions">
+                <button id="reset-order" class="reset-button"><i class="fas fa-undo"></i> 注文リセット</button>
+                <button id="send-order" class="send-button"><i class="fas fa-paper-plane"></i> 注文送信</button>
+            </div>
         </div>
         
         <div class="test-panel" id="test-panel">
             <h2><i class="fas fa-vial"></i> テスト用コントロール</h2>
             <div class="test-buttons">
-                <select id="test-table" class="test-select">
-                    <option value="TABLE01">テーブル1</option>
-                    <option value="TABLE02">テーブル2</option>
-                    <option value="TABLE03">テーブル3</option>
-                    <option value="TABLE04">テーブル4</option>
-                    <option value="TABLE05">テーブル5</option>
-                </select>
+                <div class="table-selection">
+                    <h3>テーブル選択</h3>
+                    <div class="table-radio-group">
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE01">
+                            <span class="table-radio-label">テーブル1</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE02">
+                            <span class="table-radio-label">テーブル2</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE03">
+                            <span class="table-radio-label">テーブル3</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE04">
+                            <span class="table-radio-label">テーブル4</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE05">
+                            <span class="table-radio-label">テーブル5</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <h3>商品選択</h3>
                 <div class="product-buttons">
                     <button type="button" class="test-button" data-product-id="P001"><i class="fas fa-utensils"></i> 醤油ラーメン</button>
                     <button type="button" class="test-button" data-product-id="P002"><i class="fas fa-utensils"></i> 味噌ラーメン</button>
@@ -42,7 +76,7 @@
                 </div>
             </div>
             <div class="test-description">
-                <i class="fas fa-info-circle"></i> 商品ボタンをクリックするとQRコード読み取りをシミュレーションします
+                <i class="fas fa-info-circle"></i> まずテーブルを選択し、商品ボタンをクリックすると注文が追加されます
             </div>
         </div>
         

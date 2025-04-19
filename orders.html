@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注文一覧 - QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .orders-container {
+            margin-top: 20px;
+        }
+        
+        .order-card {
+            background-color: var(--card-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            padding-top: 60px; /* ステータス表示のための余白を上部に追加 */
+            padding-right: 150px; /* 経過時間表示のための余白を増やす */
+            margin-bottom: 30px;
+            box-shadow: var(--box-shadow);
+            border-left: 5px solid var(--primary-color);
+            position: relative;
+            transition: var(--transition);
+            min-height: 240px; /* 最小の高さを設定して経過時間が入るようにする */
+        }
+        
+        .order-card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding-bottom: 10px;
+            gap: 15px;
+        }
+        
+        .order-id {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            flex: 1;
+        }
+        
+        .order-status {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            font-weight: 700;
+            padding: 12px 20px;
+            font-size: 1.4rem;
+            background-color: rgba(52, 152, 219, 0.15);
+            color: #3498db;
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .order-status.completed {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+        }
+        
+        .order-status.cancelled {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+        
+        .elapsed-time {
+            position: absolute;
+            top: 70px; /* ヘッダーの下に配置 */
+            right: 20px;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.03);
+            border-radius: 50%; /* 完全な円形に */
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 120px; /* 幅を固定 */
+            height: 120px; /* 高さを同じにして円形に */
+            border: 3px solid rgba(0,0,0,0.03);
+        }
+        
+        .elapsed-time i {
+            color: var(--secondary-color);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .elapsed-time-value {
+            font-size: 1.8rem; /* フォントサイズを約半分に */
+            line-height: 1;
+            display: block;
+        }
+        
+        .elapsed-time-unit {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            display: block;
+            margin-top: 0;
+        }
+        
+        .show-history-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        
+        .show-history-button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+        
+        .order-history {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: rgba(0,0,0,0.02);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .order-history h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            font-size: 1rem;
+        }
+        
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            display: flex;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px dotted rgba(0,0,0,0.1);
+            font-size: 0.9rem;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .history-time {
+            color: var(--text-light);
+            min-width: 150px;
+        }
+        
+        .history-status {
+            font-weight: 600;
+        }
+        
+        .no-history {
+            font-style: italic;
+            color: var(--text-light);
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .elapsed-time-urgent {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+        
+        .elapsed-time-warning {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+        }
+        
+        .order-info {
+            margin-bottom: 15px;
+        }
+        
+        .order-info-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .order-info-label {
+            font-weight: 600;
+            color: var(--text-light);
+            width: 120px;
+        }
+        
+        .order-items {
+            background-color: #f9f9fc;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dotted rgba(0, 0, 0, 0.1);
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        
+        .order-item-name {
+            font-weight: 500;
+        }
+        
+        .order-item-price {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .order-total {
+            text-align: right;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 2px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .order-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .no-orders {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+            font-style: italic;
+            font-size: 1.2rem;
+        }
+        
+        .filter-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+            background-color: #f9f9fc;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 5px;
+        }
+        
+        .status-filter, .table-filter {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .status-filter-button, .table-filter-button {
+            padding: 8px 15px;
+            border: 2px solid var(--primary-color);
+            background: none;
+            color: var(--primary-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .status-filter-button.active, .table-filter-button.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .table-filter-button {
+            border-color: var(--secondary-color);
+            color: var(--secondary-color);
+        }
+        
+        .table-filter-button.active {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .order-status-timeline {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .status-step {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background-color: #eee;
+            color: #777;
+            position: relative;
+        }
+        
+        .status-step.completed {
+            background-color: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            font-weight: 600;
+        }
+        
+        .status-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -5px;
+            transform: translate(50%, -50%);
+            width: 5px;
+            height: 1px;
+            background-color: #ddd;
+        }
+        
+        .status-update-button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.85rem;
+        }
+        
+        .status-update-button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+        
+        .status-update-button.danger {
+            background-color: var(--danger-color);
+        }
+        
+        .status-update-button.danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .order-summary {
+            margin-top: 30px;
+            background-color: #f0f8ff;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .summary-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .summary-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .summary-item {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .summary-item-title {
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .summary-item-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>注文一覧</h1>
+        
+        <div class="navigation-bar">
+            <a href="index.html" class="admin-link"><i class="fas fa-home"></i> ホームに戻る</a>
+            <a href="analytics.html" class="admin-link"><i class="fas fa-chart-line"></i> 注文分析</a>
+            <a href="time_analysis.html" class="admin-link"><i class="fas fa-stopwatch"></i> 処理時間分析</a>
+        </div>
+        
+        <div class="order-summary" id="order-summary">
+            <div class="summary-title">注文サマリー</div>
+            <div class="summary-items">
+                <div class="summary-item">
+                    <div class="summary-item-title">合計注文数</div>
+                    <div class="summary-item-value" id="total-orders">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-title">本日の注文数</div>
+                    <div class="summary-item-value" id="today-orders">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-title">提供待ち</div>
+                    <div class="summary-item-value" id="pending-orders">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-title">合計売上</div>
+                    <div class="summary-item-value" id="total-sales">¥0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="filter-controls">
+            <div class="filter-section">
+                <div class="filter-label">ステータスでフィルター:</div>
+                <div class="status-filter">
+                    <button class="status-filter-button active" data-status="all">すべて</button>
+                    <button class="status-filter-button" data-status="受付">受付</button>
+                    <button class="status-filter-button" data-status="準備中">準備中</button>
+                    <button class="status-filter-button" data-status="調理開始">調理開始</button>
+                    <button class="status-filter-button" data-status="調理完了">調理完了</button>
+                    <button class="status-filter-button" data-status="提供待ち">提供待ち</button>
+                    <button class="status-filter-button" data-status="提供済み">提供済み</button>
+                    <button class="status-filter-button" data-status="キャンセル">キャンセル</button>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-label">テーブルでフィルター:</div>
+                <div class="table-filter" id="table-filter">
+                    <button class="table-filter-button active" data-table="all">すべて</button>
+                    <!-- テーブルボタンは動的に追加されます -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="orders-container" id="orders-container">
+            <!-- ここに注文が動的に挿入されます -->
+            <div class="no-orders" id="no-orders">
+                <i class="fas fa-clipboard-list"></i> 注文データがありません
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 経過時間を計算・表示する関数
+            function updateElapsedTimes() {
+                const elapsedTimeElements = document.querySelectorAll('.elapsed-time');
+                const now = new Date();
+                
+                elapsedTimeElements.forEach(element => {
+                    const timestamp = element.getAttribute('data-timestamp');
+                    if (!timestamp) return;
+                    
+                    const orderTime = new Date(timestamp);
+                    const elapsedMs = now - orderTime;
+                    const elapsedSeconds = Math.floor(elapsedMs / 1000);
+                    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+                    const elapsedHours = Math.floor(elapsedMinutes / 60);
+                    const elapsedDays = Math.floor(elapsedHours / 24);
+                    
+                    const elapsedTimeValue = element.querySelector('.elapsed-time-value');
+                    
+                    // 親要素からステータスを取得
+                    const orderCard = element.closest('.order-card');
+                    const orderStatus = orderCard.querySelector('.order-status').textContent;
+                    
+                    // すべての注文を秒単位で表示
+                    // 警告色の設定
+                    if (elapsedMinutes >= 30) element.classList.add('elapsed-time-warning');
+                    if (elapsedHours >= 1) element.classList.add('elapsed-time-urgent');
+                    
+                    // 秒単位の表示
+                    elapsedTimeValue.textContent = `${elapsedSeconds}`;
+                    
+                    // 状態によるマーカー（アイコンでステータスを区別）
+                    if (orderStatus === '提供済み') {
+                        element.querySelector('i').className = 'fas fa-check-circle';
+                    } else if (orderStatus === 'キャンセル') {
+                        element.querySelector('i').className = 'fas fa-times-circle';
+                    }
+                });
+            }
+            
+            // 1秒ごとに経過時間を更新
+            updateElapsedTimes();
+            setInterval(updateElapsedTimes, 1000);
+            // DOM要素
+            const ordersContainer = document.getElementById('orders-container');
+            const noOrdersMessage = document.getElementById('no-orders');
+            const statusFilterButtons = document.querySelectorAll('.status-filter-button');
+            const tableFilterContainer = document.getElementById('table-filter');
+            
+            // サマリー要素
+            const totalOrdersElement = document.getElementById('total-orders');
+            const todayOrdersElement = document.getElementById('today-orders');
+            const pendingOrdersElement = document.getElementById('pending-orders');
+            const totalSalesElement = document.getElementById('total-sales');
+            
+            // カレントフィルター
+            let currentStatusFilter = 'all';
+            let currentTableFilter = 'all';
+            
+            // オーダーデータベース操作関数
+            const OrderDB = {
+                // オーダー一覧の取得
+                getOrders: function() {
+                    const orders = localStorage.getItem('orders');
+                    return orders ? JSON.parse(orders) : [];
+                },
+                
+                // オーダーのステータス更新と履歴の記録
+                updateOrderStatus: function(orderId, newStatus) {
+                    const orders = this.getOrders();
+                    const orderIndex = orders.findIndex(order => order.id === orderId);
+                    if (orderIndex >= 0) {
+                        const now = new Date();
+                        const timestamp = now.toISOString();
+                        const prevStatus = orders[orderIndex].status;
+                        
+                        // ステータス変更履歴の追加
+                        if (!orders[orderIndex].statusHistory) {
+                            orders[orderIndex].statusHistory = [];
+                        }
+                        
+                        // 履歴にステータス変更を追加
+                        orders[orderIndex].statusHistory.push({
+                            from: prevStatus,
+                            to: newStatus,
+                            timestamp: timestamp,
+                            displayTime: now.toLocaleString('ja-JP')
+                        });
+                        
+                        // ステータス更新
+                        orders[orderIndex].status = newStatus;
+                        orders[orderIndex].updatedAt = timestamp;
+                        localStorage.setItem('orders', JSON.stringify(orders));
+                        return true;
+                    }
+                    return false;
+                },
+                
+                // オーダーの履歴を取得
+                getOrderStatusHistory: function(orderId) {
+                    const order = this.getOrderById(orderId);
+                    if (order && order.statusHistory) {
+                        return order.statusHistory;
+                    }
+                    return [];
+                }
+            };
+            
+            // テーブルフィルターボタンの生成
+            function generateTableFilters() {
+                const orders = OrderDB.getOrders();
+                const tables = new Set();
+                
+                // 使用されているテーブルのリストを取得
+                orders.forEach(order => {
+                    if (order.tableId) {
+                        tables.add(order.tableId);
+                    }
+                });
+                
+                // 既存のテーブルボタンをクリア（「すべて」ボタン以外）
+                const existingButtons = tableFilterContainer.querySelectorAll('.table-filter-button:not([data-table="all"])');
+                existingButtons.forEach(button => button.remove());
+                
+                // テーブルごとにボタンを追加
+                tables.forEach(table => {
+                    const button = document.createElement('button');
+                    button.classList.add('table-filter-button');
+                    button.setAttribute('data-table', table);
+                    button.textContent = `テーブル ${table}`;
+                    
+                    button.addEventListener('click', () => {
+                        // アクティブクラスの切り替え
+                        document.querySelectorAll('.table-filter-button').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        // フィルターの適用
+                        currentTableFilter = table;
+                        displayOrders(currentStatusFilter, currentTableFilter);
+                    });
+                    
+                    tableFilterContainer.appendChild(button);
+                });
+            }
+            
+            // 注文サマリーの更新
+            function updateOrderSummary() {
+                const orders = OrderDB.getOrders();
+                
+                // 合計注文数
+                totalOrdersElement.textContent = orders.length;
+                
+                // 本日の注文数
+                const today = new Date().toISOString().split('T')[0];
+                const todayOrders = orders.filter(order => 
+                    order.createdAt && order.createdAt.startsWith(today)
+                );
+                todayOrdersElement.textContent = todayOrders.length;
+                
+                // 提供待ち・調理中などの進行中注文数
+                const pendingOrders = orders.filter(order => 
+                    order.status !== '提供済み' && order.status !== 'キャンセル'
+                );
+                pendingOrdersElement.textContent = pendingOrders.length;
+                
+                // 合計売上（キャンセル以外）
+                const totalSales = orders
+                    .filter(order => order.status !== 'キャンセル')
+                    .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+                totalSalesElement.textContent = `¥${totalSales.toLocaleString()}`;
+            }
+            
+            // オーダー一覧の表示
+            function displayOrders(statusFilter = 'all', tableFilter = 'all') {
+                // 既存のオーダーカードをクリア（フィルターメッセージ以外）
+                const orderCards = ordersContainer.querySelectorAll('.order-card');
+                orderCards.forEach(card => card.remove());
+                
+                // オーダーデータの取得
+                const orders = OrderDB.getOrders();
+                
+                // フィルタリング
+                let filteredOrders = orders;
+                
+                // ステータスフィルター
+                if (statusFilter !== 'all') {
+                    filteredOrders = filteredOrders.filter(order => order.status === statusFilter);
+                }
+                
+                // テーブルフィルター
+                if (tableFilter !== 'all') {
+                    filteredOrders = filteredOrders.filter(order => order.tableId === tableFilter);
+                }
+                
+                // データがない場合
+                if (filteredOrders.length === 0) {
+                    noOrdersMessage.style.display = 'block';
+                    if (statusFilter === 'all' && tableFilter === 'all') {
+                        noOrdersMessage.innerHTML = '<i class="fas fa-clipboard-list"></i> 注文データがありません';
+                    } else {
+                        let message = '<i class="fas fa-filter"></i> ';
+                        if (statusFilter !== 'all') {
+                            message += `${statusFilter}状態の`;
+                        }
+                        if (tableFilter !== 'all') {
+                            message += `テーブル ${tableFilter} の`;
+                        }
+                        message += '注文はありません';
+                        noOrdersMessage.innerHTML = message;
+                    }
+                    return;
+                }
+                
+                // データがある場合
+                noOrdersMessage.style.display = 'none';
+                
+                // オーダーの新しい順にソート
+                filteredOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                // 各オーダーをDOMに追加
+                filteredOrders.forEach(order => {
+                    const orderCard = document.createElement('div');
+                    orderCard.classList.add('order-card');
+                    
+                    // 注文ステータスに応じてクラスを追加
+                    const statusClass = order.status === '提供済み' ? 'completed' : 
+                                       order.status === 'キャンセル' ? 'cancelled' : '';
+                    
+                    // 注文日時のフォーマット
+                    const orderDate = new Date(order.timestamp).toLocaleString('ja-JP', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    // 注文商品一覧のHTML
+                    const orderItemsHtml = order.items.map(item => `
+                        <div class="order-item">
+                            <span class="order-item-name">${item.name}</span>
+                            <span class="order-item-price">¥${item.price.toLocaleString()}</span>
+                        </div>
+                    `).join('');
+                    
+                    // 注文カードのHTML
+                    orderCard.innerHTML = `
+                        <div class="order-status ${statusClass}">${order.status}</div>
+                        <div class="order-header">
+                            <div class="order-id">${order.id}</div>
+                            <div class="elapsed-time" data-timestamp="${order.timestamp}">
+                                <i class="fas fa-clock"></i> 
+                                <span class="elapsed-time-value">計算中...</span>
+                                <span class="elapsed-time-unit">秒</span>
+                            </div>
+                        </div>
+                        <div class="order-info">
+                            <div class="order-info-row">
+                                <div class="order-info-label">テーブル:</div>
+                                <div>${order.tableId}</div>
+                            </div>
+                            <div class="order-info-row">
+                                <div class="order-info-label">注文日時:</div>
+                                <div>${orderDate}</div>
+                            </div>
+                            <div class="order-info-row">
+                                <div class="order-info-label">ステータス:</div>
+                                <div class="order-status-timeline">
+                                    <div class="status-step ${order.status === '受付' || order.status === '準備中' || order.status === '調理開始' || order.status === '調理完了' || order.status === '提供待ち' || order.status === '提供済み' ? 'completed' : ''}">受付</div>
+                                    <div class="status-step ${order.status === '準備中' || order.status === '調理開始' || order.status === '調理完了' || order.status === '提供待ち' || order.status === '提供済み' ? 'completed' : ''}">準備中</div>
+                                    <div class="status-step ${order.status === '調理開始' || order.status === '調理完了' || order.status === '提供待ち' || order.status === '提供済み' ? 'completed' : ''}">調理開始</div>
+                                    <div class="status-step ${order.status === '調理完了' || order.status === '提供待ち' || order.status === '提供済み' ? 'completed' : ''}">調理完了</div>
+                                    <div class="status-step ${order.status === '提供待ち' || order.status === '提供済み' ? 'completed' : ''}">提供待ち</div>
+                                    <div class="status-step ${order.status === '提供済み' ? 'completed' : ''}">提供済み</div>
+                                </div>
+                            </div>
+                            <button class="show-history-button" data-id="${order.id}">履歴を表示</button>
+                            <div class="order-history" id="history-${order.id}" style="display: none;">
+                                <h4>ステータス変更履歴</h4>
+                                <div class="history-list">
+                                    ${order.statusHistory ? order.statusHistory.map(entry => `
+                                        <div class="history-item">
+                                            <div class="history-time">${entry.displayTime}</div>
+                                            <div class="history-status">${entry.from} → ${entry.to}</div>
+                                        </div>
+                                    `).join('') : '<div class="no-history">履歴がありません</div>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="order-items">
+                            <h3>注文商品</h3>
+                            ${orderItemsHtml}
+                            <div class="order-total">
+                                合計: ¥${order.totalAmount ? order.totalAmount.toLocaleString() : '不明'}
+                            </div>
+                        </div>
+                        <div class="order-actions">
+                            ${order.status === '受付' ? `
+                                <button class="status-update-button" data-id="${order.id}" data-status="準備中">準備中に変更</button>
+                                <button class="status-update-button danger" data-id="${order.id}" data-status="キャンセル">キャンセル</button>
+                            ` : ''}
+                            ${order.status === '準備中' ? `
+                                <button class="status-update-button" data-id="${order.id}" data-status="調理開始">調理開始に変更</button>
+                                <button class="status-update-button danger" data-id="${order.id}" data-status="キャンセル">キャンセル</button>
+                            ` : ''}
+                            ${order.status === '調理開始' ? `
+                                <button class="status-update-button" data-id="${order.id}" data-status="調理完了">調理完了に変更</button>
+                            ` : ''}
+                            ${order.status === '調理完了' ? `
+                                <button class="status-update-button" data-id="${order.id}" data-status="提供待ち">提供待ちに変更</button>
+                            ` : ''}
+                            ${order.status === '提供待ち' ? `
+                                <button class="status-update-button" data-id="${order.id}" data-status="提供済み">提供済みに変更</button>
+                            ` : ''}
+                        </div>
+                    `;
+                    
+                    // 注文ステータス更新ボタンのイベントリスナー設定
+                    const statusButtons = orderCard.querySelectorAll('.status-update-button');
+                    statusButtons.forEach(button => {
+                        button.addEventListener('click', () => {
+                            const orderId = button.getAttribute('data-id');
+                            const newStatus = button.getAttribute('data-status');
+                            
+                            // ステータス更新
+                            if (OrderDB.updateOrderStatus(orderId, newStatus)) {
+                                // 成功したら画面を更新
+                                displayOrders(currentStatusFilter, currentTableFilter);
+                                updateOrderSummary();
+                                generateTableFilters();
+                            }
+                        });
+                    });
+                    
+                    // 履歴表示ボタンのイベントリスナー設定
+                    const historyButton = orderCard.querySelector('.show-history-button');
+                    if (historyButton) {
+                        historyButton.addEventListener('click', () => {
+                            const orderId = historyButton.getAttribute('data-id');
+                            const historyContainer = document.getElementById(`history-${orderId}`);
+                            
+                            if (historyContainer.style.display === 'none') {
+                                historyContainer.style.display = 'block';
+                                historyButton.textContent = '履歴を隠す';
+                            } else {
+                                historyContainer.style.display = 'none';
+                                historyButton.textContent = '履歴を表示';
+                            }
+                        });
+                    }
+                    
+                    // DOMに追加
+                    ordersContainer.appendChild(orderCard);
+                });
+            }
+            
+            // ステータスフィルタリングボタンのイベントリスナー設定
+            statusFilterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // アクティブクラスの切り替え
+                    statusFilterButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    // フィルターの適用
+                    currentStatusFilter = button.getAttribute('data-status');
+                    displayOrders(currentStatusFilter, currentTableFilter);
+                });
+            });
+            
+            // 「すべて」テーブルボタンのイベントリスナー設定
+            const allTableButton = document.querySelector('.table-filter-button[data-table="all"]');
+            allTableButton.addEventListener('click', () => {
+                document.querySelectorAll('.table-filter-button').forEach(btn => btn.classList.remove('active'));
+                allTableButton.classList.add('active');
+                currentTableFilter = 'all';
+                displayOrders(currentStatusFilter, currentTableFilter);
+            });
+            
+            // 初期表示
+            generateTableFilters();
+            updateOrderSummary();
+            displayOrders();
+        });
+    </script>
+</body>
+</html>
