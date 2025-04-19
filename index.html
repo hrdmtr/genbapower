@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>QRコードリーダー注文システム</h1>
+        
+        <div class="connection-panel">
+            <button id="connect-button" class="primary-button">QRコードリーダーに接続</button>
+            <div id="connection-status" class="status-indicator">未接続</div>
+        </div>
+        
+        <div class="log-panel">
+            <h2>ログ</h2>
+            <div id="log-container"></div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
