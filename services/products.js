@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const { connectToMongoDB } = require('./database');
 const mongoConfig = require('../config/mongodb.config');
 
@@ -23,7 +23,7 @@ async function getProducts(query = {}, limit = 100) {
 
 /**
  * 商品データを取得する関数
- * @param {string} productId 商品ID
+ * @param {string} productId 商品IDまたはObjectID
  * @returns {Promise<object>} 商品データ
  */
 async function getProductById(productId) {
@@ -31,8 +31,14 @@ async function getProductById(productId) {
     const db = await connectToMongoDB();
     const collection = db.collection('products');
     
-    const product = await collection.findOne({ productId });
-    return product;
+    let query = { productId };
+    
+    if (ObjectId.isValid(productId)) {
+      const product = await collection.findOne({ _id: new ObjectId(productId) });
+      if (product) return product;
+    }
+    
+    return await collection.findOne(query);
   } catch (error) {
     console.error('商品データの取得エラー:', error);
     throw error;
@@ -65,7 +71,7 @@ async function saveProduct(productData) {
 
 /**
  * 商品データを更新する関数
- * @param {string} productId 商品ID
+ * @param {string} productId 商品IDまたはObjectID
  * @param {object} productData 更新する商品データ
  * @returns {Promise<object>} 更新結果
  */
@@ -74,8 +80,14 @@ async function updateProduct(productId, productData) {
     const db = await connectToMongoDB();
     const collection = db.collection('products');
     
+    let filter = { productId };
+    
+    if (ObjectId.isValid(productId)) {
+      filter = { _id: new ObjectId(productId) };
+    }
+    
     const result = await collection.updateOne(
-      { productId },
+      filter,
       { $set: productData }
     );
     
@@ -93,7 +105,7 @@ async function updateProduct(productId, productData) {
 
 /**
  * 商品データを削除する関数
- * @param {string} productId 商品ID
+ * @param {string} productId 商品IDまたはObjectID
  * @returns {Promise<object>} 削除結果
  */
 async function deleteProduct(productId) {
@@ -101,7 +113,13 @@ async function deleteProduct(productId) {
     const db = await connectToMongoDB();
     const collection = db.collection('products');
     
-    const result = await collection.deleteOne({ productId });
+    let filter = { productId };
+    
+    if (ObjectId.isValid(productId)) {
+      filter = { _id: new ObjectId(productId) };
+    }
+    
+    const result = await collection.deleteOne(filter);
     
     if (result.deletedCount === 0) {
       throw new Error(`商品ID ${productId} が見つかりません`);
