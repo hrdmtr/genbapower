@@ -34,11 +34,12 @@ async function testAddOrder() {
   try {
     console.log('\n注文追加テストを開始します...');
     
-    // テスト用の注文データ
+    // テスト用の注文データ (英語のカラム名を使用)
     const testOrder = {
-      orderId: 'TEST123',
-      table: 'TABLE01',
-      menu: 'RAMEN_SHOYU'
+      tableNumber: 'TABLE01',
+      orderDate: new Date(),
+      status: 'PENDING',
+      productId: 12345
     };
     
     // 注文を保存
