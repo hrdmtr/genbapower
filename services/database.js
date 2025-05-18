@@ -58,6 +58,25 @@ async function saveOrder(orderData) {
 }
 
 /**
+ * 注文データを取得する関数
+ * @param {object} query 検索クエリ（オプション）
+ * @param {number} limit 取得件数の上限（オプション）
+ * @returns {Promise<Array>} 注文データの配列
+ */
+async function getOrders(query = {}, limit = 100) {
+  try {
+    const db = await connectToMongoDB();
+    const collection = db.collection(mongoConfig.collection);
+    
+    const orders = await collection.find(query).limit(limit).toArray();
+    return orders;
+  } catch (error) {
+    console.error('注文データの取得エラー:', error);
+    throw error;
+  }
+}
+
+/**
  * MongoDB接続を閉じる関数
  */
 async function closeMongoDB() {
@@ -72,5 +91,6 @@ async function closeMongoDB() {
 module.exports = {
   connectToMongoDB,
   saveOrder,
+  getOrders,
   closeMongoDB
 };
