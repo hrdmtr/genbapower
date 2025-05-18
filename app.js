@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isConnected = false;
 
     // APIエンドポイント
-    const API_ENDPOINT = 'https://example.com/api/orders';
+    const API_ENDPOINT = '/api/orders';
 
     // ログ追加関数
     function addLog(message, type = 'info') {
