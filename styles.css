@@ -202,8 +202,10 @@ h2 {
     display: none;
     cursor: pointer;
     padding: 10px;
-    background-color: #f8f9fa;  /* 背景色を追加 */
-    border-radius: 4px;         /* 角丸を追加 */
+    background-color: #3498db;  /* 青色の背景に変更 */
+    border-radius: 4px;
+    border: 2px solid #2980b9;  /* 境界線を追加 */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);  /* 影を追加 */
 }
 
 .hamburger-icon {
@@ -218,7 +220,7 @@ h2 {
     position: absolute;
     height: 3px;
     width: 100%;
-    background: #3498db;
+    background: #ffffff;  /* 白色に変更 */
     border-radius: 3px;
     opacity: 1;
     left: 0;
@@ -262,11 +264,11 @@ h2 {
     }
     
     .hamburger-menu {
-        display: block;
-        position: absolute;  /* 絶対位置指定に変更 */
-        top: 10px;           /* 上部からの距離を指定 */
-        right: 10px;         /* 右側からの距離を指定 */
-        z-index: 100;        /* 重なり順序を設定 */
+        display: block !important; /* 強制的に表示 */
+        position: fixed;  /* 固定位置に変更 */
+        top: 20px;        /* 上部からの距離を調整 */
+        right: 20px;      /* 右側からの距離を調整 */
+        z-index: 1000;    /* 重なり順序を高く設定 */
     }
     
     .nav-link {
