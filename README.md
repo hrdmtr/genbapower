@@ -29,6 +29,30 @@
 - Web Serial APIはHTTPSまたはlocalhostでのみ動作します
 - APIエンドポイントは`app.js`内の`API_ENDPOINT`定数で設定できます
 
+## MongoDB統合
+
+このアプリケーションはMongoDB統合をサポートしており、スキャンされたQRコードデータをデータベースに保存します。
+
+### 設定手順
+
+1. `config/certs`ディレクトリにX.509証明書ファイルを`mongodb.pem`として配置します
+2. 必要に応じて`config/mongodb.config.js`で接続設定を変更します
+3. 依存関係をインストールします：
+   ```
+   npm install
+   ```
+4. サーバーを起動します：
+   ```
+   npm start
+   ```
+
+### 接続テスト
+
+MongoDB接続をテストするには以下のコマンドを実行します：
+```
+npm run test-db
+```
+
 ## QRコードフォーマット
 QRコードには以下の形式のデータが含まれている必要があります：
 ```
