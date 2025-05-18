@@ -28,6 +28,32 @@ h2 {
     color: #2c3e50;
 }
 
+.nav-bar {
+    display: flex;
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.nav-link {
+    padding: 15px 25px;
+    color: #3498db;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.nav-link:hover {
+    background-color: #f5f9fd;
+}
+
+.nav-link.active {
+    background-color: #3498db;
+    color: white;
+}
+
 .connection-panel {
     background-color: #fff;
     border-radius: 5px;
@@ -107,4 +133,66 @@ h2 {
 .log-error {
     background-color: #fdeeee;
     border-left: 4px solid #e74c3c;
+}
+
+/* 注文一覧スタイル */
+.orders-panel {
+    background-color: #fff;
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.orders-table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.orders-table th,
+.orders-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.orders-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #2c3e50;
+    position: sticky;
+    top: 0;
+}
+
+.orders-table tbody tr:hover {
+    background-color: #f5f9fd;
+}
+
+.status-pending {
+    background-color: #fff9db;
+    color: #e67e22;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-message {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+}
+
+.status-message.error {
+    display: block;
+    background-color: #fdeeee;
+    border-left: 4px solid #e74c3c;
+    color: #e74c3c;
 }
