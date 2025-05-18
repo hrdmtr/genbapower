@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .header {
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .product-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header d-flex justify-content-between align-items-center">
+            <h1>商品管理</h1>
+            <div>
+                <a href="index.html" class="btn btn-outline-secondary me-2">ホームに戻る</a>
+                <button id="add-product-btn" class="btn btn-primary">新規商品追加</button>
+            </div>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>商品ID</th>
+                        <th>商品名</th>
+                        <th>価格</th>
+                        <th>画像</th>
+                        <th>説明</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="products-table-body">
+                    <tr>
+                        <td colspan="6" class="text-center">読み込み中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 商品追加・編集モーダル -->
+    <div class="modal fade" id="product-modal" tabindex="-1" aria-labelledby="product-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="product-modal-label">商品追加</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="product-form">
+                        <input type="hidden" id="product-id">
+                        <div class="form-group">
+                            <label for="product-product-id">商品ID</label>
+                            <input type="text" class="form-control" id="product-product-id" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="product-name">商品名</label>
+                            <input type="text" class="form-control" id="product-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="product-price">価格</label>
+                            <input type="number" class="form-control" id="product-price" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="product-image">画像URL</label>
+                            <input type="text" class="form-control" id="product-image">
+                        </div>
+                        <div class="form-group">
+                            <label for="product-description">説明</label>
+                            <textarea class="form-control" id="product-description" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="save-product-btn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 削除確認モーダル -->
+    <div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="delete-modal-label">商品削除の確認</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>商品「<span id="delete-product-name"></span>」を削除してもよろしいですか？</p>
+                    <p class="text-danger">この操作は元に戻せません。</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-btn">削除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="products-management.js"></script>
+</body>
+</html>
