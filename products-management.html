@@ -29,10 +29,26 @@
     <div class="container">
         <div class="header d-flex justify-content-between align-items-center">
             <h1>商品管理</h1>
-            <div>
+            <div class="d-flex d-md-none">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+            <div class="d-none d-md-block">
                 <a href="index.html" class="btn btn-outline-secondary me-2">ホームに戻る</a>
                 <button id="add-product-btn" class="btn btn-primary">新規商品追加</button>
             </div>
+        </div>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mb-3">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">ホームに戻る</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="mobile-add-product-btn">新規商品追加</a>
+                </li>
+            </ul>
         </div>
 
         <div id="alert-container"></div>

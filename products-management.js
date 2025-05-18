@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const productsTableBody = document.getElementById('products-table-body');
     const addProductBtn = document.getElementById('add-product-btn');
+    const mobileAddProductBtn = document.getElementById('mobile-add-product-btn');
     const saveProductBtn = document.getElementById('save-product-btn');
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     const alertContainer = document.getElementById('alert-container');
@@ -238,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     addProductBtn.addEventListener('click', openAddModal);
+    if (mobileAddProductBtn) {
+        mobileAddProductBtn.addEventListener('click', openAddModal);
+    }
     saveProductBtn.addEventListener('click', saveProduct);
     confirmDeleteBtn.addEventListener('click', deleteProduct);
     
