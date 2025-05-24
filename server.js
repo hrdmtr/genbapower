@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { connectToMongoDB, saveOrder } = require('./services/database');
 const { getProducts, getProductById, saveProduct, updateProduct, deleteProduct } = require('./services/products');
+const { getUsers, getUserById, saveUser, updateUser, deleteUser } = require('./services/users');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -147,6 +148,118 @@ app.delete('/api/products/:productId', async (req, res) => {
     });
   } catch (error) {
     console.error('商品データ削除エラー:', error);
+    
+    if (error.message.includes('見つかりません')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
+});
+
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await getUsers();
+    
+    res.status(200).json({
+      success: true,
+      data: users
+    });
+  } catch (error) {
+    console.error('ユーザデータ取得エラー:', error);
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
+});
+
+app.get('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await getUserById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'ユーザが見つかりません'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('ユーザデータ取得エラー:', error);
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const result = await saveUser(req.body);
+    
+    res.status(201).json({
+      success: true,
+      message: 'ユーザが保存されました',
+      id: result.insertedId
+    });
+  } catch (error) {
+    console.error('ユーザデータ保存エラー:', error);
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
+});
+
+app.put('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    await updateUser(userId, req.body);
+    
+    res.status(200).json({
+      success: true,
+      message: 'ユーザが更新されました'
+    });
+  } catch (error) {
+    console.error('ユーザデータ更新エラー:', error);
+    
+    if (error.message.includes('見つかりません')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
+});
+
+app.delete('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    await deleteUser(userId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'ユーザが削除されました'
+    });
+  } catch (error) {
+    console.error('ユーザデータ削除エラー:', error);
     
     if (error.message.includes('見つかりません')) {
       return res.status(404).json({
