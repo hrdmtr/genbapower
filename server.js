@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { connectToMongoDB, saveOrder } = require('./services/database');
 const { getProducts, getProductById, saveProduct, updateProduct, deleteProduct } = require('./services/products');
-const { getUsers, getUserById, saveUser, updateUser, deleteUser } = require('./services/users');
+const { getUsers, getUserById, saveUser, updateUser, deleteUser, getUserCount } = require('./services/users');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -164,12 +164,16 @@ app.delete('/api/products/:productId', async (req, res) => {
 });
 
 app.get('/api/users', async (req, res) => {
-  const { search, sortField, sortOrder } = req.query;
+  const { search, sortField, sortOrder, page = 1, limit = 20 } = req.query;
   console.log('Request query params:', req.query);
   
   try {
     let query = {};
     let sortOptions = {};
+    
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
     
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i');
@@ -187,11 +191,18 @@ app.get('/api/users', async (req, res) => {
       sortOptions[sortField] = sortOrder === 'desc' ? -1 : 1;
     }
     
-    const users = await getUsers(query, 100, sortOptions);
+    const users = await getUsers(query, limitNum, sortOptions, skip);
+    const totalUsers = await getUserCount(query);
     
     res.status(200).json({
       success: true,
-      data: users
+      data: users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalUsers,
+        totalPages: Math.ceil(totalUsers / limitNum)
+      }
     });
   } catch (error) {
     console.error('ユーザデータ取得エラー:', error);
@@ -254,13 +265,26 @@ app.get('/api/users', async (req, res) => {
         });
       }
       
-      console.log('Returning mock data with', filteredUsers.length, 'users');
-      console.log('Filtered users:', filteredUsers.map(u => u.userId));
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 20;
+      const skip = (pageNum - 1) * limitNum;
+      const totalUsers = filteredUsers.length;
+      const paginatedUsers = filteredUsers.slice(skip, skip + limitNum);
+      
+      console.log('Returning mock data with', filteredUsers.length, 'total users');
+      console.log('Paginated users:', paginatedUsers.map(u => u.userId));
+      console.log('Pagination:', { page: pageNum, limit: limitNum, total: totalUsers, totalPages: Math.ceil(totalUsers / limitNum) });
       
       return res.status(200).json({
         success: true,
-        data: filteredUsers,
-        message: 'Using mock data (MongoDB unavailable)'
+        data: paginatedUsers,
+        message: 'Using mock data (MongoDB unavailable)',
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalUsers,
+          totalPages: Math.ceil(totalUsers / limitNum)
+        }
       });
     } catch (mockError) {
       console.error('Mock data fallback error:', mockError);
