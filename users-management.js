@@ -55,9 +55,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
     }
     
-    async function fetchUsers() {
+    let currentSearch = '';
+    let currentSortField = '';
+    let currentSortOrder = '';
+
+    async function fetchUsers(search = '', sortField = '', sortOrder = '') {
         try {
-            const response = await fetch(API_ENDPOINT);
+            let url = API_ENDPOINT;
+            const params = new URLSearchParams();
+            
+            if (search) params.append('search', search);
+            if (sortField) params.append('sortField', sortField);
+            if (sortOrder) params.append('sortOrder', sortOrder);
+            
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+            
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`APIエラー: ${response.status}`);
             }
@@ -228,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showAlert(isEdit ? 'ユーザが更新されました' : 'ユーザが追加されました');
             
-            fetchUsers();
+            fetchUsers(currentSearch, currentSortField, currentSortOrder);
         } catch (error) {
             console.error('ユーザ保存エラー:', error);
             showAlert(`ユーザの保存に失敗しました: ${error.message}`, 'danger');
@@ -257,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showAlert('ユーザが削除されました');
             
-            fetchUsers();
+            fetchUsers(currentSearch, currentSortField, currentSortOrder);
         } catch (error) {
             console.error('ユーザ削除エラー:', error);
             showAlert(`ユーザの削除に失敗しました: ${error.message}`, 'danger');
@@ -273,5 +288,37 @@ document.addEventListener('DOMContentLoaded', () => {
     saveUserBtn.addEventListener('click', saveUser);
     confirmDeleteBtn.addEventListener('click', deleteUser);
     
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    
+    function performSearch() {
+        currentSearch = searchInput.value.trim();
+        fetchUsers(currentSearch, currentSortField, currentSortOrder);
+    }
+    
+    function clearSearch() {
+        searchInput.value = '';
+        currentSearch = '';
+        fetchUsers(currentSearch, currentSortField, currentSortOrder);
+    }
+    
+    searchBtn.addEventListener('click', performSearch);
+    clearSearchBtn.addEventListener('click', clearSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('sort-link')) {
+            e.preventDefault();
+            currentSortField = e.target.getAttribute('data-field');
+            currentSortOrder = e.target.getAttribute('data-order');
+            fetchUsers(currentSearch, currentSortField, currentSortOrder);
+        }
+    });
+
     fetchUsers();
 });

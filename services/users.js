@@ -7,12 +7,18 @@ const { connectToMongoDB } = require('./database');
  * @param {number} limit 取得件数の上限（オプション）
  * @returns {Promise<Array>} ユーザデータの配列
  */
-async function getUsers(query = {}, limit = 100) {
+async function getUsers(query = {}, limit = 100, sortOptions = {}) {
   try {
     const db = await connectToMongoDB();
     const collection = db.collection('users');
     
-    const users = await collection.find(query).limit(limit).toArray();
+    let cursor = collection.find(query);
+    
+    if (Object.keys(sortOptions).length > 0) {
+      cursor = cursor.sort(sortOptions);
+    }
+    
+    const users = await cursor.limit(limit).toArray();
     return users;
   } catch (error) {
     console.error('ユーザデータの取得エラー:', error);

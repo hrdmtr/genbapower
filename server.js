@@ -165,7 +165,28 @@ app.delete('/api/products/:productId', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
-    const users = await getUsers();
+    const { search, sortField, sortOrder } = req.query;
+    
+    let query = {};
+    let sortOptions = {};
+    
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query = {
+        $or: [
+          { userId: searchRegex },
+          { status: searchRegex },
+          { rank: searchRegex },
+          { memo: searchRegex }
+        ]
+      };
+    }
+    
+    if (sortField && sortOrder) {
+      sortOptions[sortField] = sortOrder === 'desc' ? -1 : 1;
+    }
+    
+    const users = await getUsers(query, 100, sortOptions);
     
     res.status(200).json({
       success: true,
