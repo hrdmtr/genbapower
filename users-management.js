@@ -55,9 +55,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
     }
     
-    async function fetchUsers() {
+    let currentSearch = '';
+    let currentSortField = '';
+    let currentSortOrder = '';
+    let currentPage = 1;
+    let totalPages = 1;
+    let totalUsers = 0;
+    const RECORDS_PER_PAGE = 20;
+
+    async function fetchUsers(search = '', sortField = '', sortOrder = '', page = 1) {
         try {
-            const response = await fetch(API_ENDPOINT);
+            let url = API_ENDPOINT;
+            const params = new URLSearchParams();
+            
+            if (search) params.append('search', search);
+            if (sortField) params.append('sortField', sortField);
+            if (sortOrder) params.append('sortOrder', sortOrder);
+            params.append('page', page);
+            params.append('limit', RECORDS_PER_PAGE);
+            
+            url += '?' + params.toString();
+            
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`APIエラー: ${response.status}`);
             }
@@ -68,7 +87,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.message || 'ユーザデータの取得に失敗しました');
             }
             
+            if (data.pagination) {
+                currentPage = data.pagination.page;
+                totalPages = data.pagination.totalPages;
+                totalUsers = data.pagination.total;
+            }
+            
             displayUsers(data.data || []);
+            updatePagination();
+            updatePageInfo();
         } catch (error) {
             console.error('ユーザデータ取得エラー:', error);
             showAlert(`ユーザデータの取得に失敗しました: ${error.message}`, 'danger');
@@ -228,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showAlert(isEdit ? 'ユーザが更新されました' : 'ユーザが追加されました');
             
-            fetchUsers();
+            fetchUsers(currentSearch, currentSortField, currentSortOrder);
         } catch (error) {
             console.error('ユーザ保存エラー:', error);
             showAlert(`ユーザの保存に失敗しました: ${error.message}`, 'danger');
@@ -257,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showAlert('ユーザが削除されました');
             
-            fetchUsers();
+            fetchUsers(currentSearch, currentSortField, currentSortOrder);
         } catch (error) {
             console.error('ユーザ削除エラー:', error);
             showAlert(`ユーザの削除に失敗しました: ${error.message}`, 'danger');
@@ -273,5 +300,119 @@ document.addEventListener('DOMContentLoaded', () => {
     saveUserBtn.addEventListener('click', saveUser);
     confirmDeleteBtn.addEventListener('click', deleteUser);
     
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    
+    function updatePagination() {
+        const paginationContainer = document.getElementById('pagination-container');
+        if (!paginationContainer) return;
+        
+        paginationContainer.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+        
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">前へ</a>`;
+        paginationContainer.appendChild(prevLi);
+        
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        
+        if (startPage > 1) {
+            const firstLi = document.createElement('li');
+            firstLi.className = 'page-item';
+            firstLi.innerHTML = `<a class="page-link" href="#" data-page="1">1</a>`;
+            paginationContainer.appendChild(firstLi);
+            
+            if (startPage > 2) {
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+                paginationContainer.appendChild(ellipsisLi);
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+            paginationContainer.appendChild(pageLi);
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+                paginationContainer.appendChild(ellipsisLi);
+            }
+            
+            const lastLi = document.createElement('li');
+            lastLi.className = 'page-item';
+            lastLi.innerHTML = `<a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a>`;
+            paginationContainer.appendChild(lastLi);
+        }
+        
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">次へ</a>`;
+        paginationContainer.appendChild(nextLi);
+    }
+    
+    function updatePageInfo() {
+        const pageInfo = document.getElementById('page-info');
+        if (!pageInfo) return;
+        
+        const startRecord = totalUsers === 0 ? 0 : (currentPage - 1) * RECORDS_PER_PAGE + 1;
+        const endRecord = Math.min(currentPage * RECORDS_PER_PAGE, totalUsers);
+        
+        pageInfo.textContent = `${startRecord}-${endRecord}件を表示（全${totalUsers}件中）`;
+    }
+    
+    function goToPage(page) {
+        if (page < 1 || page > totalPages || page === currentPage) return;
+        currentPage = page;
+        fetchUsers(currentSearch, currentSortField, currentSortOrder, currentPage);
+    }
+    
+    function performSearch() {
+        currentSearch = searchInput.value.trim();
+        currentPage = 1; // Reset to first page on new search
+        fetchUsers(currentSearch, currentSortField, currentSortOrder, currentPage);
+    }
+    
+    function clearSearch() {
+        searchInput.value = '';
+        currentSearch = '';
+        currentPage = 1; // Reset to first page
+        fetchUsers(currentSearch, currentSortField, currentSortOrder, currentPage);
+    }
+    
+    searchBtn.addEventListener('click', performSearch);
+    clearSearchBtn.addEventListener('click', clearSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('sort-link')) {
+            e.preventDefault();
+            currentSortField = e.target.getAttribute('data-field');
+            currentSortOrder = e.target.getAttribute('data-order');
+            currentPage = 1; // Reset to first page on new sort
+            fetchUsers(currentSearch, currentSortField, currentSortOrder, currentPage);
+        }
+        
+        if (e.target.classList.contains('page-link') && e.target.getAttribute('data-page')) {
+            e.preventDefault();
+            const page = parseInt(e.target.getAttribute('data-page'), 10);
+            goToPage(page);
+        }
+    });
+
     fetchUsers();
 });
