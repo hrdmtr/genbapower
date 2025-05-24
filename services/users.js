@@ -4,16 +4,33 @@ const { connectToMongoDB } = require('./database');
 /**
  * ユーザデータを取得する関数
  * @param {object} query 検索クエリ（オプション）
- * @param {number} limit 取得件数の上限（オプション）
- * @returns {Promise<Array>} ユーザデータの配列
+ * @param {number} page ページ番号（オプション）
+ * @param {number} pageSize 1ページあたりの件数（オプション）
+ * @returns {Promise<Object>} ユーザデータと総件数
  */
-async function getUsers(query = {}, limit = 100) {
+async function getUsers(query = {}, page = 1, pageSize = 20) {
   try {
     const db = await connectToMongoDB();
     const collection = db.collection('users');
     
-    const users = await collection.find(query).limit(limit).toArray();
-    return users;
+    const total = await collection.countDocuments(query);
+    
+    const skip = (page - 1) * pageSize;
+    
+    const users = await collection.find(query)
+      .skip(skip)
+      .limit(pageSize)
+      .toArray();
+    
+    return {
+      users,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    };
   } catch (error) {
     console.error('ユーザデータの取得エラー:', error);
     throw error;

@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const userMemoInput = document.getElementById('user-memo');
     
     let deleteUserId = null;
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
     
     const API_ENDPOINT = '/api/users';
     
@@ -55,9 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
     }
     
-    async function fetchUsers() {
+    async function fetchUsers(page = currentPage) {
         try {
-            const response = await fetch(API_ENDPOINT);
+            const response = await fetch(`${API_ENDPOINT}?page=${page}&pageSize=${PAGE_SIZE}`);
             if (!response.ok) {
                 throw new Error(`APIエラー: ${response.status}`);
             }
@@ -68,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.message || 'ユーザデータの取得に失敗しました');
             }
             
-            displayUsers(data.data || []);
+            currentPage = page;
+            displayUsers(data.data || [], data.pagination);
         } catch (error) {
             console.error('ユーザデータ取得エラー:', error);
             showAlert(`ユーザデータの取得に失敗しました: ${error.message}`, 'danger');
@@ -83,7 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function displayUsers(users) {
+    function displayUsers(users, pagination = null) {
+        if (pagination) {
+            updatePaginationControls(pagination);
+        }
+        
         if (users.length === 0) {
             usersTableBody.innerHTML = `
                 <tr>
@@ -228,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showAlert(isEdit ? 'ユーザが更新されました' : 'ユーザが追加されました');
             
-            fetchUsers();
+            fetchUsers(currentPage);
         } catch (error) {
             console.error('ユーザ保存エラー:', error);
             showAlert(`ユーザの保存に失敗しました: ${error.message}`, 'danger');
@@ -257,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showAlert('ユーザが削除されました');
             
-            fetchUsers();
+            fetchUsers(currentPage);
         } catch (error) {
             console.error('ユーザ削除エラー:', error);
             showAlert(`ユーザの削除に失敗しました: ${error.message}`, 'danger');
@@ -272,6 +279,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     saveUserBtn.addEventListener('click', saveUser);
     confirmDeleteBtn.addEventListener('click', deleteUser);
+    
+    function updatePaginationControls(pagination) {
+        const paginationInfo = document.getElementById('pagination-info');
+        const paginationShowing = document.getElementById('pagination-showing');
+        const paginationTotal = document.getElementById('pagination-total');
+        const paginationControls = document.getElementById('pagination-controls');
+        
+        if (!pagination || pagination.total === 0) {
+            paginationInfo.style.display = 'none';
+            paginationControls.innerHTML = '';
+            return;
+        }
+        
+        paginationInfo.style.display = 'block';
+        paginationShowing.textContent = Math.min(pagination.total, pagination.page * pagination.pageSize);
+        paginationTotal.textContent = pagination.total;
+        
+        paginationControls.innerHTML = '';
+        
+        const prevItem = document.createElement('li');
+        prevItem.classList.add('page-item');
+        if (pagination.page <= 1) prevItem.classList.add('disabled');
+        
+        const prevLink = document.createElement('a');
+        prevLink.classList.add('page-link');
+        prevLink.href = '#';
+        prevLink.setAttribute('aria-label', '前のページ');
+        prevLink.innerHTML = '&laquo;';
+        
+        prevItem.appendChild(prevLink);
+        paginationControls.appendChild(prevItem);
+        
+        for (let i = 1; i <= pagination.totalPages; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.classList.add('page-item');
+            if (i === pagination.page) pageItem.classList.add('active');
+            
+            const pageLink = document.createElement('a');
+            pageLink.classList.add('page-link');
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            
+            pageItem.appendChild(pageLink);
+            paginationControls.appendChild(pageItem);
+        }
+        
+        const nextItem = document.createElement('li');
+        nextItem.classList.add('page-item');
+        if (pagination.page >= pagination.totalPages) nextItem.classList.add('disabled');
+        
+        const nextLink = document.createElement('a');
+        nextLink.classList.add('page-link');
+        nextLink.href = '#';
+        nextLink.setAttribute('aria-label', '次のページ');
+        nextLink.innerHTML = '&raquo;';
+        
+        nextItem.appendChild(nextLink);
+        paginationControls.appendChild(nextItem);
+        
+        document.querySelectorAll('#pagination-controls .page-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                if (link.getAttribute('aria-label') === '前のページ' && pagination.page > 1) {
+                    fetchUsers(pagination.page - 1);
+                } else if (link.getAttribute('aria-label') === '次のページ' && pagination.page < pagination.totalPages) {
+                    fetchUsers(pagination.page + 1);
+                } else if (!isNaN(parseInt(link.textContent))) {
+                    fetchUsers(parseInt(link.textContent));
+                }
+            });
+        });
+    }
     
     fetchUsers();
 });

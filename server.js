@@ -165,11 +165,14 @@ app.delete('/api/products/:productId', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
-    const users = await getUsers();
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 20;
+    const result = await getUsers({}, page, pageSize);
     
     res.status(200).json({
       success: true,
-      data: users
+      data: result.users,
+      pagination: result.pagination
     });
   } catch (error) {
     console.error('ユーザデータ取得エラー:', error);
