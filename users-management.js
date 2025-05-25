@@ -550,6 +550,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (user.points) user.points = parseInt(user.points, 10);
                     
+                    const validRanks = ['REGULAR', 'SILVER', 'GOLD', 'PLATINUM', 'VIP'];
+                    const validStatuses = ['ACTIVE', 'INACTIVE', 'PENDING', 'BLOCKED'];
+                    
+                    if (user.rank) {
+                        user.rank = user.rank.trim().toUpperCase();
+                        if (!validRanks.includes(user.rank)) {
+                            user.rank = 'REGULAR'; // デフォルト値
+                        }
+                    } else {
+                        user.rank = 'REGULAR';
+                    }
+                    
+                    if (user.status) {
+                        user.status = user.status.trim().toUpperCase();
+                        if (!validStatuses.includes(user.status)) {
+                            user.status = 'ACTIVE'; // デフォルト値
+                        }
+                    } else {
+                        user.status = 'ACTIVE';
+                    }
+                    
                     users.push(user);
                 }
                 
