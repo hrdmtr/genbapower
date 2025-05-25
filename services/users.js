@@ -5,14 +5,22 @@ const { connectToMongoDB } = require('./database');
  * ユーザデータを取得する関数
  * @param {object} query 検索クエリ（オプション）
  * @param {number} limit 取得件数の上限（オプション）
+ * @param {object} sortOptions ソートオプション（オプション）
+ * @param {number} skip スキップする件数（オプション）
  * @returns {Promise<Array>} ユーザデータの配列
  */
-async function getUsers(query = {}, limit = 100) {
+async function getUsers(query = {}, limit = 100, sortOptions = {}, skip = 0) {
   try {
     const db = await connectToMongoDB();
     const collection = db.collection('users');
     
-    const users = await collection.find(query).limit(limit).toArray();
+    let cursor = collection.find(query);
+    
+    if (Object.keys(sortOptions).length > 0) {
+      cursor = cursor.sort(sortOptions);
+    }
+    
+    const users = await cursor.skip(skip).limit(limit).toArray();
     return users;
   } catch (error) {
     console.error('ユーザデータの取得エラー:', error);
@@ -133,10 +141,27 @@ async function deleteUser(userId) {
   }
 }
 
+/**
+ * ユーザ数を取得する関数
+ * @param {object} query 検索クエリ（オプション）
+ * @returns {Promise<number>} ユーザ数
+ */
+async function getUserCount(query = {}) {
+  try {
+    const db = await connectToMongoDB();
+    const collection = db.collection('users');
+    return await collection.countDocuments(query);
+  } catch (error) {
+    console.error('ユーザ数取得エラー:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getUsers,
   getUserById,
   saveUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  getUserCount
 };

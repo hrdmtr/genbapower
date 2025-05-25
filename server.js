@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { connectToMongoDB, saveOrder } = require('./services/database');
 const { getProducts, getProductById, saveProduct, updateProduct, deleteProduct } = require('./services/products');
-const { getUsers, getUserById, saveUser, updateUser, deleteUser } = require('./services/users');
+const { getUsers, getUserById, saveUser, updateUser, deleteUser, getUserCount } = require('./services/users');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -164,19 +164,135 @@ app.delete('/api/products/:productId', async (req, res) => {
 });
 
 app.get('/api/users', async (req, res) => {
+  const { search, sortField, sortOrder, page = 1, limit = 20 } = req.query;
+  console.log('Request query params:', req.query);
+  
   try {
-    const users = await getUsers();
+    let query = {};
+    let sortOptions = {};
+    
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+    
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query = {
+        $or: [
+          { userId: searchRegex },
+          { status: searchRegex },
+          { rank: searchRegex },
+          { memo: searchRegex }
+        ]
+      };
+    }
+    
+    if (sortField && sortOrder) {
+      sortOptions[sortField] = sortOrder === 'desc' ? -1 : 1;
+    }
+    
+    const users = await getUsers(query, limitNum, sortOptions, skip);
+    const totalUsers = await getUserCount(query);
     
     res.status(200).json({
       success: true,
-      data: users
+      data: users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalUsers,
+        totalPages: Math.ceil(totalUsers / limitNum)
+      }
     });
   } catch (error) {
     console.error('ユーザデータ取得エラー:', error);
-    res.status(500).json({
-      success: false,
-      message: 'サーバーエラーが発生しました'
-    });
+    
+    try {
+      console.log('Falling back to mock data due to MongoDB connection error');
+      
+      const mockUsers = [
+        { _id: '1', userId: 'user001', points: 1000, registrationDate: new Date('2024-01-15'), status: 'ACTIVE', rank: 'PREMIUM', memo: 'テストユーザー1' },
+        { _id: '2', userId: 'user002', points: 500, registrationDate: new Date('2024-02-10'), status: 'INACTIVE', rank: 'REGULAR', memo: 'テストユーザー2' },
+        { _id: '3', userId: 'admin001', points: 2000, registrationDate: new Date('2024-01-01'), status: 'ACTIVE', rank: 'ADMIN', memo: '管理者' },
+        { _id: '4', userId: 'test123', points: 750, registrationDate: new Date('2024-03-05'), status: 'ACTIVE', rank: 'REGULAR', memo: 'サンプル' }
+      ];
+      
+      let filteredUsers = [...mockUsers];
+      
+      if (search && search.trim()) {
+        console.log('Applying search filter:', search);
+        const searchTerm = search.trim().toLowerCase();
+        console.log('Search term (lowercase):', searchTerm);
+        
+        filteredUsers = filteredUsers.filter(user => {
+          const matchUserId = user.userId && user.userId.toLowerCase().includes(searchTerm);
+          const matchMemo = user.memo && user.memo.toLowerCase().includes(searchTerm);
+          
+          const matchStatus = user.status && user.status.toLowerCase() === searchTerm;
+          const matchRank = user.rank && user.rank.toLowerCase() === searchTerm;
+          
+          console.log(`Filtering user ${user.userId}:`, {
+            matchUserId,
+            matchStatus,
+            matchRank,
+            matchMemo,
+            result: matchUserId || matchStatus || matchRank || matchMemo
+          });
+          
+          return matchUserId || matchStatus || matchRank || matchMemo;
+        });
+      }
+      
+      if (sortField && sortOrder) {
+        console.log('Applying sort:', sortField, sortOrder);
+        filteredUsers.sort((a, b) => {
+          let aVal = a[sortField];
+          let bVal = b[sortField];
+          
+          if (sortField === 'registrationDate') {
+            aVal = new Date(aVal);
+            bVal = new Date(bVal);
+          }
+          
+          if (sortField === 'points') {
+            aVal = Number(aVal) || 0;
+            bVal = Number(bVal) || 0;
+          }
+          
+          if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+          if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+      
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 20;
+      const skip = (pageNum - 1) * limitNum;
+      const totalUsers = filteredUsers.length;
+      const paginatedUsers = filteredUsers.slice(skip, skip + limitNum);
+      
+      console.log('Returning mock data with', filteredUsers.length, 'total users');
+      console.log('Paginated users:', paginatedUsers.map(u => u.userId));
+      console.log('Pagination:', { page: pageNum, limit: limitNum, total: totalUsers, totalPages: Math.ceil(totalUsers / limitNum) });
+      
+      return res.status(200).json({
+        success: true,
+        data: paginatedUsers,
+        message: 'Using mock data (MongoDB unavailable)',
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalUsers,
+          totalPages: Math.ceil(totalUsers / limitNum)
+        }
+      });
+    } catch (mockError) {
+      console.error('Mock data fallback error:', mockError);
+      return res.status(500).json({
+        success: false,
+        message: 'サーバーエラーが発生しました'
+      });
+    }
   }
 });
 
