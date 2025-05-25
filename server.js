@@ -172,7 +172,51 @@ app.delete('/api/products/:productId', async (req, res) => {
   }
 });
 
+app.get('/api/users/export', async (req, res) => {
+  try {
+    const users = await getUsers({}, 0); // limit=0 で全件取得
+    
+    res.status(200).json({
+      success: true,
+      data: users
+    });
+  } catch (error) {
+    console.error('ユーザデータエクスポートエラー:', error);
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
+});
 
+app.post('/api/users/import', async (req, res) => {
+  try {
+    const { users } = req.body;
+    
+    if (!users || !Array.isArray(users) || users.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '有効なユーザデータが必要です'
+      });
+    }
+    
+    const deleteResult = await deleteAllUsers();
+    const insertResult = await insertManyUsers(users);
+    
+    res.status(200).json({
+      success: true,
+      message: 'ユーザデータのインポートが完了しました',
+      count: insertResult.insertedCount,
+      deletedCount: deleteResult.deletedCount
+    });
+  } catch (error) {
+    console.error('ユーザデータインポートエラー:', error);
+    res.status(500).json({
+      success: false,
+      message: `インポートに失敗しました: ${error.message}`
+    });
+  }
+});
 
 app.get('/api/users', async (req, res) => {
   const { search, sortField, sortOrder, page = 1, limit = 20 } = req.query;
