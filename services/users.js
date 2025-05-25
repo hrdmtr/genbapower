@@ -157,11 +157,62 @@ async function getUserCount(query = {}) {
   }
 }
 
+/**
+ * すべてのユーザデータを削除する関数
+ * @returns {Promise<object>} 削除結果
+ */
+async function deleteAllUsers() {
+  try {
+    const db = await connectToMongoDB();
+    const collection = db.collection('users');
+    
+    const result = await collection.deleteMany({});
+    
+    console.log(`すべてのユーザデータを削除しました。削除件数: ${result.deletedCount}`);
+    return result;
+  } catch (error) {
+    console.error('ユーザデータの一括削除エラー:', error);
+    throw error;
+  }
+}
+
+/**
+ * 複数のユーザデータを一括で保存する関数
+ * @param {Array<object>} users ユーザデータの配列
+ * @returns {Promise<object>} 保存結果
+ */
+async function insertManyUsers(users) {
+  if (!users || !Array.isArray(users) || users.length === 0) {
+    throw new Error('有効なユーザデータ配列が必要です');
+  }
+  
+  try {
+    const db = await connectToMongoDB();
+    const collection = db.collection('users');
+    
+    const processedUsers = users.map(user => ({
+      ...user,
+      registrationDate: user.registrationDate ? new Date(user.registrationDate) : new Date(),
+      createdAt: new Date()
+    }));
+    
+    const result = await collection.insertMany(processedUsers);
+    
+    console.log(`${result.insertedCount}件のユーザデータを一括保存しました`);
+    return result;
+  } catch (error) {
+    console.error('ユーザデータの一括保存エラー:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getUsers,
   getUserById,
   saveUser,
   updateUser,
   deleteUser,
-  getUserCount
+  getUserCount,
+  deleteAllUsers,
+  insertManyUsers
 };

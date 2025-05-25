@@ -2,7 +2,16 @@ const express = require('express');
 const path = require('path');
 const { connectToMongoDB, saveOrder } = require('./services/database');
 const { getProducts, getProductById, saveProduct, updateProduct, deleteProduct } = require('./services/products');
-const { getUsers, getUserById, saveUser, updateUser, deleteUser, getUserCount } = require('./services/users');
+const { 
+  getUsers, 
+  getUserById, 
+  saveUser, 
+  updateUser, 
+  deleteUser, 
+  getUserCount,
+  deleteAllUsers,
+  insertManyUsers
+} = require('./services/users');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -162,6 +171,8 @@ app.delete('/api/products/:productId', async (req, res) => {
     });
   }
 });
+
+
 
 app.get('/api/users', async (req, res) => {
   const { search, sortField, sortOrder, page = 1, limit = 20 } = req.query;
@@ -390,6 +401,8 @@ app.delete('/api/users/:userId', async (req, res) => {
     });
   }
 });
+
+
 
 app.listen(PORT, () => {
   console.log(`サーバーが起動しました: http://localhost:${PORT}`);
