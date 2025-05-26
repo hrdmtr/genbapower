@@ -16,7 +16,13 @@
             border-bottom: 1px solid #e5e5e5;
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .save-button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+            margin-bottom: 30px;
         }
     </style>
 </head>
@@ -31,7 +37,6 @@
             </div>
             <div class="d-none d-md-block">
                 <a href="index.html" class="btn btn-outline-secondary me-2">ホームに戻る</a>
-                <button id="save-settings-btn" class="btn btn-primary">設定を保存</button>
             </div>
         </div>
         
@@ -39,9 +44,6 @@
             <ul class="navbar-nav mb-3">
                 <li class="nav-item">
                     <a href="index.html" class="nav-link">ホームに戻る</a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" id="mobile-save-settings-btn">設定を保存</a>
                 </li>
             </ul>
         </div>
@@ -52,17 +54,44 @@
             <div class="card-body">
                 <form id="settings-form">
                     <div class="form-group">
+                        <label for="app-name">アプリケーション名</label>
+                        <input type="text" class="form-control" id="app-name" required maxlength="100">
+                        <div class="invalid-feedback">アプリケーション名を入力してください</div>
+                        <small class="text-muted">最大100文字まで</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="app-name-description">アプリケーション名の説明</label>
+                        <textarea class="form-control" id="app-name-description" rows="2" required></textarea>
+                        <div class="invalid-feedback">アプリケーション名の説明を入力してください</div>
+                    </div>
+
+                    <div class="form-group">
                         <label for="base-url">サーバーベースURL</label>
                         <input type="text" class="form-control" id="base-url" required>
                         <div class="invalid-feedback">サーバーベースURLを入力してください</div>
                     </div>
                     <div class="form-group">
+                        <label for="base-url-description">サーバーベースURLの説明</label>
+                        <textarea class="form-control" id="base-url-description" rows="2" required></textarea>
+                        <div class="invalid-feedback">サーバーベースURLの説明を入力してください</div>
+                    </div>
+
+                    <div class="form-group">
                         <label for="records-per-page">１画面の行数</label>
                         <input type="number" class="form-control" id="records-per-page" required min="1">
                         <div class="invalid-feedback">１画面の行数を入力してください</div>
                     </div>
+                    <div class="form-group">
+                        <label for="records-per-page-description">１画面の行数の説明</label>
+                        <textarea class="form-control" id="records-per-page-description" rows="2" required></textarea>
+                        <div class="invalid-feedback">１画面の行数の説明を入力してください</div>
+                    </div>
                 </form>
             </div>
+        </div>
+
+        <div class="save-button-container">
+            <button id="save-settings-btn" class="btn btn-primary btn-lg">設定を保存</button>
         </div>
     </div>
 

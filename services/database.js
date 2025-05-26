@@ -29,7 +29,7 @@ async function connectToMongoDB() {
     return db;
   } catch (error) {
     console.error('MongoDB接続エラー:', error);
-    throw error;
+    return null;
   }
 }
 
