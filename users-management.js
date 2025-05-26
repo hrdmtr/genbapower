@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const csvFileInput = document.getElementById('csv-file-input');
     const confirmImportBtn = document.getElementById('confirm-import-btn');
     
+    const chargePointsBtn = document.getElementById('charge-points-btn');
+    const chargeModal = new bootstrap.Modal(document.getElementById('charge-modal'));
+    const chargeAmountBtns = document.querySelectorAll('.charge-amount-btn');
+    
     const userModal = new bootstrap.Modal(document.getElementById('user-modal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('delete-modal'));
     const importModal = new bootstrap.Modal(document.getElementById('import-modal'));
@@ -144,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${user.rank || 'REGULAR'}</td>
                 <td>${user.memo || ''}</td>
                 <td>
+                    <button class="btn btn-sm btn-outline-warning charge-btn me-1" data-user-id="${user._id}" data-user-points="${user.points || 0}">チャージ</button>
                     <button class="btn btn-sm btn-outline-primary edit-btn me-1" data-user-id="${user._id}">編集</button>
                     <button class="btn btn-sm btn-outline-danger delete-btn" data-user-id="${user._id}" data-user-name="${user.userId}">削除</button>
                 </td>
@@ -166,6 +171,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 openDeleteModal(userId, userName);
             });
         });
+        
+        document.querySelectorAll('.charge-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const userId = button.getAttribute('data-user-id');
+                const userPoints = parseInt(button.getAttribute('data-user-points'), 10) || 0;
+                openChargeModal(userId, userPoints);
+            });
+        });
     }
     
     function openAddModal() {
@@ -178,6 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userMemoInput.value = '';
         
         document.getElementById('user-modal-label').textContent = '新規ユーザ追加';
+        chargePointsBtn.style.display = 'none'; // Hide charge button in add mode
         
         userModal.show();
     }
@@ -213,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             userMemoInput.value = user.memo || '';
             
             document.getElementById('user-modal-label').textContent = 'ユーザ編集';
+            chargePointsBtn.style.display = 'block'; // Show charge button in edit mode
             
             userModal.show();
         } catch (error) {
@@ -655,6 +670,78 @@ document.addEventListener('DOMContentLoaded', () => {
     
     csvFileInput.addEventListener('change', handleFileSelect);
     confirmImportBtn.addEventListener('click', importUsersFromCsv);
+    
+    let currentChargeUserId = null;
+    
+    function openChargeModal(userId, userPoints) {
+        currentChargeUserId = userId;
+        chargeModal.show();
+    }
+    
+    async function chargePoints(amount) {
+        if (!currentChargeUserId) {
+            showAlert('エラー: ユーザIDが見つかりません', 'danger');
+            return;
+        }
+        
+        if (confirm(`${amount}ポイント、チャージしますか？`)) {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/${currentChargeUserId}`);
+                if (!response.ok) {
+                    throw new Error(`APIエラー: ${response.status}`);
+                }
+                
+                const userData = await response.json();
+                if (!userData.success) {
+                    throw new Error('ユーザデータの取得に失敗しました');
+                }
+                
+                const user = userData.data;
+                const newPoints = (user.points || 0) + amount;
+                
+                const updateData = {
+                    userId: user.userId,
+                    points: newPoints,
+                    registrationDate: user.registrationDate,
+                    status: user.status,
+                    rank: user.rank,
+                    memo: user.memo
+                };
+                
+                const updateResponse = await fetch(`${API_ENDPOINT}/${currentChargeUserId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!updateResponse.ok) {
+                    throw new Error(`APIエラー: ${updateResponse.status}`);
+                }
+                
+                const updateResult = await updateResponse.json();
+                
+                if (!updateResult.success) {
+                    throw new Error(updateResult.message || 'ポイントチャージに失敗しました');
+                }
+                
+                chargeModal.hide();
+                showAlert(`${amount}ポイントをチャージしました。現在のポイント: ${newPoints}`);
+                fetchUsers(currentSearch, currentSortField, currentSortOrder);
+            } catch (error) {
+                console.error('ポイントチャージエラー:', error);
+                showAlert(`ポイントチャージに失敗しました: ${error.message}`, 'danger');
+            }
+        }
+    }
+    
+    chargeAmountBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const amount = parseInt(btn.dataset.amount, 10);
+            chargePoints(amount);
+        });
+    });
     
     fetchUsers();
 });
