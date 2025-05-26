@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const csvFileInput = document.getElementById('csv-file-input');
     const confirmImportBtn = document.getElementById('confirm-import-btn');
     
+    const chargePointsBtn = document.getElementById('charge-points-btn');
+    const chargeModal = new bootstrap.Modal(document.getElementById('charge-modal'));
+    const chargeAmountBtns = document.querySelectorAll('.charge-amount-btn');
+    
     const userModal = new bootstrap.Modal(document.getElementById('user-modal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('delete-modal'));
     const importModal = new bootstrap.Modal(document.getElementById('import-modal'));
@@ -178,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userMemoInput.value = '';
         
         document.getElementById('user-modal-label').textContent = '新規ユーザ追加';
+        chargePointsBtn.style.display = 'none'; // Hide charge button in add mode
         
         userModal.show();
     }
@@ -213,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             userMemoInput.value = user.memo || '';
             
             document.getElementById('user-modal-label').textContent = 'ユーザ編集';
+            chargePointsBtn.style.display = 'block'; // Show charge button in edit mode
             
             userModal.show();
         } catch (error) {
@@ -655,6 +661,61 @@ document.addEventListener('DOMContentLoaded', () => {
     
     csvFileInput.addEventListener('change', handleFileSelect);
     confirmImportBtn.addEventListener('click', importUsersFromCsv);
+    
+    async function chargePoints(amount) {
+        const currentPoints = parseInt(userPointsInput.value, 10) || 0;
+        const newPoints = currentPoints + amount;
+        
+        if (confirm(`${amount}ポイント、チャージしますか？`)) {
+            try {
+                userPointsInput.value = newPoints;
+                
+                const userData = {
+                    userId: userUserIdInput.value,
+                    points: newPoints,
+                    registrationDate: userRegistrationDateInput.value ? new Date(userRegistrationDateInput.value) : new Date(),
+                    status: userStatusInput.value,
+                    rank: userRankInput.value,
+                    memo: userMemoInput.value
+                };
+                
+                const response = await fetch(`${API_ENDPOINT}/${userIdInput.value}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`APIエラー: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'ポイントチャージに失敗しました');
+                }
+                
+                chargeModal.hide();
+                showAlert(`${amount}ポイントをチャージしました。現在のポイント: ${newPoints}`);
+                fetchUsers(currentSearch, currentSortField, currentSortOrder);
+            } catch (error) {
+                console.error('ポイントチャージエラー:', error);
+                showAlert(`ポイントチャージに失敗しました: ${error.message}`, 'danger');
+                userPointsInput.value = currentPoints;
+            }
+        }
+    }
+    
+    chargePointsBtn.addEventListener('click', () => chargeModal.show());
+    
+    chargeAmountBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const amount = parseInt(btn.dataset.amount, 10);
+            chargePoints(amount);
+        });
+    });
     
     fetchUsers();
 });
