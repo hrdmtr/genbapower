@@ -6,8 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     const alertContainer = document.getElementById('alert-container');
     
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const importCsvBtn = document.getElementById('import-csv-btn');
+    const mobileExportCsvBtn = document.getElementById('mobile-export-csv-btn');
+    const mobileImportCsvBtn = document.getElementById('mobile-import-csv-btn');
+    const csvFileInput = document.getElementById('csv-file-input');
+    const confirmImportBtn = document.getElementById('confirm-import-btn');
+    
     const userModal = new bootstrap.Modal(document.getElementById('user-modal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('delete-modal'));
+    const importModal = new bootstrap.Modal(document.getElementById('import-modal'));
     
     const userIdInput = document.getElementById('user-id');
     const userUserIdInput = document.getElementById('user-user-id');
@@ -18,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userMemoInput = document.getElementById('user-memo');
     
     let deleteUserId = null;
+    let importData = null;
     
     const API_ENDPOINT = '/api/users';
     
@@ -414,5 +423,238 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    async function exportUsersToCsv() {
+        try {
+            showAlert('CSVエクスポートを開始しています...', 'info');
+            
+            const response = await fetch(`${API_ENDPOINT}/export`);
+            if (!response.ok) {
+                throw new Error(`APIエラー: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || 'ユーザデータの取得に失敗しました');
+            }
+            
+            const users = data.data || [];
+            if (users.length === 0) {
+                showAlert('エクスポートするユーザデータがありません', 'warning');
+                return;
+            }
+            
+            const headers = ['userId', 'points', 'registrationDate', 'status', 'rank', 'memo'];
+            let csvContent = headers.join(',') + '\n';
+            
+            users.forEach(user => {
+                const row = [
+                    user.userId || '',
+                    user.points || 0,
+                    user.registrationDate ? new Date(user.registrationDate).toISOString() : '',
+                    user.status || 'ACTIVE',
+                    user.rank || 'REGULAR',
+                    (user.memo || '').replace(/,/g, '，').replace(/\n/g, ' ') // カンマと改行を置換
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            
+            const entityName = 'user';
+            const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').substring(0, 14);
+            const checksum = CryptoJS.MD5(entityName).toString();
+            const filename = `${entityName}_${timestamp}_${checksum}.csv`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert(`${users.length}件のユーザデータをエクスポートしました`, 'success');
+        } catch (error) {
+            console.error('CSVエクスポートエラー:', error);
+            showAlert(`CSVエクスポートに失敗しました: ${error.message}`, 'danger');
+        }
+    }
+    
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            confirmImportBtn.disabled = true;
+            document.getElementById('import-preview').classList.add('d-none');
+            document.getElementById('import-error').classList.add('d-none');
+            return;
+        }
+        
+        if (!file.name.endsWith('.csv')) {
+            document.getElementById('import-error').textContent = 'CSVファイルを選択してください';
+            document.getElementById('import-error').classList.remove('d-none');
+            document.getElementById('import-preview').classList.add('d-none');
+            confirmImportBtn.disabled = true;
+            return;
+        }
+        
+        const filenameRegex = /^([a-zA-Z0-9_]+)_(\d{14})_([a-fA-F0-9]{32})\.csv$/;
+        const match = file.name.match(filenameRegex);
+        
+        if (!match) {
+            document.getElementById('import-error').textContent = 'ファイル名の形式が正しくありません。エクスポート機能で出力したファイルを使用してください。';
+            document.getElementById('import-error').classList.remove('d-none');
+            document.getElementById('import-preview').classList.add('d-none');
+            confirmImportBtn.disabled = true;
+            return;
+        }
+        
+        const [_, entityName, timestamp, fileChecksum] = match;
+        
+        const calculatedChecksum = CryptoJS.MD5(entityName).toString();
+        if (fileChecksum.toLowerCase() !== calculatedChecksum.toLowerCase()) {
+            document.getElementById('import-error').textContent = 'ファイルのチェックサムが一致しません。ファイルが改ざんされている可能性があります。';
+            document.getElementById('import-error').classList.remove('d-none');
+            document.getElementById('import-preview').classList.add('d-none');
+            confirmImportBtn.disabled = true;
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const csvContent = e.target.result;
+                const lines = csvContent.split('\n').filter(line => line.trim());
+                
+                if (lines.length < 2) {
+                    throw new Error('CSVファイルにデータがありません');
+                }
+                
+                const headers = lines[0].split(',');
+                const expectedHeaders = ['userId', 'points', 'registrationDate', 'status', 'rank', 'memo'];
+                
+                if (!expectedHeaders.every(header => headers.includes(header))) {
+                    throw new Error('CSVファイルのヘッダーが正しくありません');
+                }
+                
+                const users = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    if (values.length !== headers.length) continue;
+                    
+                    const user = {};
+                    headers.forEach((header, index) => {
+                        user[header] = values[index];
+                    });
+                    
+                    if (user.points) user.points = parseInt(user.points, 10);
+                    
+                    const validRanks = ['REGULAR', 'SILVER', 'GOLD', 'PLATINUM', 'VIP'];
+                    const validStatuses = ['ACTIVE', 'INACTIVE', 'PENDING', 'BLOCKED'];
+                    
+                    if (user.rank) {
+                        user.rank = user.rank.trim().toUpperCase();
+                        if (!validRanks.includes(user.rank)) {
+                            user.rank = 'REGULAR'; // デフォルト値
+                        }
+                    } else {
+                        user.rank = 'REGULAR';
+                    }
+                    
+                    if (user.status) {
+                        user.status = user.status.trim().toUpperCase();
+                        if (!validStatuses.includes(user.status)) {
+                            user.status = 'ACTIVE'; // デフォルト値
+                        }
+                    } else {
+                        user.status = 'ACTIVE';
+                    }
+                    
+                    users.push(user);
+                }
+                
+                importData = users;
+                
+                document.getElementById('import-filename').textContent = file.name;
+                document.getElementById('import-record-count').textContent = users.length;
+                document.getElementById('import-preview').classList.remove('d-none');
+                document.getElementById('import-error').classList.add('d-none');
+                confirmImportBtn.disabled = false;
+            } catch (error) {
+                console.error('CSVパースエラー:', error);
+                document.getElementById('import-error').textContent = `CSVファイルの解析に失敗しました: ${error.message}`;
+                document.getElementById('import-error').classList.remove('d-none');
+                document.getElementById('import-preview').classList.add('d-none');
+                confirmImportBtn.disabled = true;
+            }
+        };
+        
+        reader.onerror = function() {
+            document.getElementById('import-error').textContent = 'ファイルの読み込みに失敗しました';
+            document.getElementById('import-error').classList.remove('d-none');
+            document.getElementById('import-preview').classList.add('d-none');
+            confirmImportBtn.disabled = true;
+        };
+        
+        reader.readAsText(file);
+    }
+    
+    async function importUsersFromCsv() {
+        if (!importData || importData.length === 0) {
+            showAlert('インポートするデータがありません', 'warning');
+            return;
+        }
+        
+        try {
+            showAlert('CSVインポートを開始しています...', 'info');
+            
+            const response = await fetch(`${API_ENDPOINT}/import`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ users: importData })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`APIエラー: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || 'ユーザデータのインポートに失敗しました');
+            }
+            
+            importModal.hide();
+            
+            csvFileInput.value = '';
+            importData = null;
+            document.getElementById('import-preview').classList.add('d-none');
+            confirmImportBtn.disabled = true;
+            
+            showAlert(`インポートが成功しました。${data.count}件のユーザデータを登録しました。`, 'success');
+            
+            fetchUsers();
+        } catch (error) {
+            console.error('CSVインポートエラー:', error);
+            showAlert(`CSVインポートに失敗しました: ${error.message}`, 'danger');
+        }
+    }
+    
+    exportCsvBtn.addEventListener('click', exportUsersToCsv);
+    importCsvBtn.addEventListener('click', () => importModal.show());
+    
+    if (mobileExportCsvBtn) {
+        mobileExportCsvBtn.addEventListener('click', exportUsersToCsv);
+    }
+    
+    if (mobileImportCsvBtn) {
+        mobileImportCsvBtn.addEventListener('click', () => importModal.show());
+    }
+    
+    csvFileInput.addEventListener('change', handleFileSelect);
+    confirmImportBtn.addEventListener('click', importUsersFromCsv);
+    
     fetchUsers();
 });

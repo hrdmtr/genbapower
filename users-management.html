@@ -31,6 +31,8 @@
             </div>
             <div class="d-none d-md-block">
                 <a href="index.html" class="btn btn-outline-secondary me-2">ホームに戻る</a>
+                <button id="export-csv-btn" class="btn btn-success me-2">CSVエクスポート</button>
+                <button id="import-csv-btn" class="btn btn-info me-2">CSVインポート</button>
                 <button id="add-user-btn" class="btn btn-primary">新規ユーザ追加</button>
             </div>
         </div>
@@ -39,6 +41,12 @@
             <ul class="navbar-nav mb-3">
                 <li class="nav-item">
                     <a href="index.html" class="nav-link">ホームに戻る</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="mobile-export-csv-btn">CSVエクスポート</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="mobile-import-csv-btn">CSVインポート</a>
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link" id="mobile-add-user-btn">新規ユーザ追加</a>
@@ -188,8 +196,42 @@
             </div>
         </div>
     </div>
+    
+    <!-- CSVインポートモーダル -->
+    <div class="modal fade" id="import-modal" tabindex="-1" aria-labelledby="import-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="import-modal-label">CSVインポート</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="csv-file-input" class="form-label">CSVファイルを選択</label>
+                        <input class="form-control" type="file" id="csv-file-input" accept=".csv">
+                        <div class="form-text">エクスポート機能で出力したCSVファイルを選択してください。</div>
+                    </div>
+                    <div id="import-preview" class="d-none">
+                        <h6>インポート内容プレビュー</h6>
+                        <p>ファイル名: <span id="import-filename"></span></p>
+                        <p>レコード数: <span id="import-record-count">0</span>件</p>
+                        <div class="alert alert-warning">
+                            <strong>注意:</strong> インポートを実行すると、既存のすべてのユーザデータが削除され、
+                            このファイルのデータに置き換えられます。この操作は元に戻せません。
+                        </div>
+                    </div>
+                    <div id="import-error" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="confirm-import-btn" disabled>インポート実行</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <script src="users-management.js"></script>
 </body>
 </html>
