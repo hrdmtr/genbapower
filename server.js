@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { connectToMongoDB, saveOrder } = require('./services/database');
 const { getProducts, getProductById, saveProduct, updateProduct, deleteProduct } = require('./services/products');
+const { getServerSettings, saveServerSettings } = require('./services/server-settings');
 const { 
   getUsers, 
   getUserById, 
@@ -456,4 +457,38 @@ process.on('SIGINT', async () => {
   const { closeMongoDB } = require('./services/database');
   await closeMongoDB();
   process.exit(0);
+});
+
+app.get('/api/server-settings', async (req, res) => {
+  try {
+    const settings = await getServerSettings();
+    
+    res.status(200).json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error('サーバー設定取得エラー:', error);
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
+});
+
+app.post('/api/server-settings', async (req, res) => {
+  try {
+    const result = await saveServerSettings(req.body);
+    
+    res.status(200).json({
+      success: true,
+      message: 'サーバー設定が保存されました'
+    });
+  } catch (error) {
+    console.error('サーバー設定保存エラー:', error);
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました'
+    });
+  }
 });
