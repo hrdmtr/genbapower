@@ -1,7 +1,30 @@
 const { MongoClient } = require('mongodb');
 const fs = require('fs');
 const path = require('path');
-const mongoConfig = require('../config/mongodb.config');
+require('dotenv').config();
+
+const appMode = process.env.APP_MODE || 'development';
+
+let mongoConfig;
+if (appMode === 'local') {
+  console.log('ローカルモード: MongoDB接続設定を使用します');
+  try {
+    mongoConfig = require('../config/mongodb.local');
+  } catch (err) {
+    console.log('ローカル設定ファイルが見つからないため、デフォルト設定を使用します');
+    mongoConfig = {
+      uri: "mongodb://localhost:27017",
+      dbName: "genbapower",
+      options: {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+      },
+      collection: "orders"
+    };
+  }
+} else {
+  mongoConfig = require('../config/mongodb.config');
+}
 
 let client = null;
 let db = null;
@@ -13,12 +36,21 @@ let db = null;
 async function connectToMongoDB() {
   try {
     if (!client) {
-      const certPath = path.resolve(__dirname, '..', mongoConfig.options.tlsCertificateKeyFile);
+      let options = { ...mongoConfig.options };
       
-      client = new MongoClient(mongoConfig.uri, {
-        ...mongoConfig.options,
-        tlsCertificateKeyFile: certPath
-      });
+      if (appMode !== 'local' && options.tlsCertificateKeyFile) {
+        try {
+          const certPath = path.resolve(__dirname, '..', options.tlsCertificateKeyFile);
+          await fs.promises.access(certPath, fs.constants.F_OK);
+          options.tlsCertificateKeyFile = certPath;
+        } catch (certError) {
+          console.warn('証明書ファイルが見つかりません。TLSなしで接続します:', certError.message);
+          delete options.tlsCertificateKeyFile;
+          delete options.tls;
+        }
+      }
+      
+      client = new MongoClient(mongoConfig.uri, options);
       
       await client.connect();
       console.log('MongoDB接続成功');

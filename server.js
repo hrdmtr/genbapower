@@ -1,5 +1,7 @@
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
+require('dotenv').config();
 const { connectToMongoDB, saveOrder } = require('./services/database');
 const { getProducts, getProductById, saveProduct, updateProduct, deleteProduct } = require('./services/products');
 const { getServerSettings, saveServerSettings } = require('./services/server-settings');
@@ -16,7 +18,14 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const APP_MODE = process.env.APP_MODE || 'development';
 
+console.log(`現在の動作モード: ${APP_MODE}`);
+if (APP_MODE === 'local') {
+  console.log('ローカルモード: LIFF認証をバイパスします');
+}
+
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -448,6 +457,8 @@ app.delete('/api/users/:userId', async (req, res) => {
 });
 
 
+
+app.use('/api/line', require('./routes/line-routes'));
 
 app.listen(PORT, () => {
   console.log(`サーバーが起動しました: http://localhost:${PORT}`);
