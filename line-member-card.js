@@ -10,8 +10,8 @@ let transactionLimit = 10;
 let hasMoreTransactions = true;
 let balanceChart = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-  fetchEnvironmentSettings();
+document.addEventListener('DOMContentLoaded', async () => {
+  await fetchEnvironmentSettings();
   
   setupEventListeners();
   
