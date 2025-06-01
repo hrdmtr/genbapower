@@ -474,16 +474,24 @@ app.get('/api/server-settings', async (req, res) => {
   try {
     const settings = await getServerSettings();
     
-    res.status(200).json({
-      success: true,
-      data: settings || {
+    const responseData = {
+      ...(settings || {
         appName: 'QRコードリーダー注文システム',
         appNameDescription: 'アプリケーションの名前',
         baseUrl: 'http://localhost:8000',
         baseUrlDescription: 'APIリクエストのベースURL',
         recordsPerPage: 20,
         recordsPerPageDescription: '1ページあたりの表示件数'
-      }
+      }),
+      appMode: process.env.APP_MODE || 'local',
+      liffId: process.env.LIFF_ID || 'dummy_liff_id',
+      lineChannelId: process.env.LINE_CHANNEL_ID || '',
+      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: responseData
     });
   } catch (error) {
     console.error('サーバー設定取得エラー:', error);
@@ -496,7 +504,11 @@ app.get('/api/server-settings', async (req, res) => {
         baseUrl: 'http://localhost:8000',
         baseUrlDescription: 'APIリクエストのベースURL',
         recordsPerPage: 20,
-        recordsPerPageDescription: '1ページあたりの表示件数'
+        recordsPerPageDescription: '1ページあたりの表示件数',
+        appMode: process.env.APP_MODE || 'local',
+        liffId: process.env.LIFF_ID || 'dummy_liff_id',
+        lineChannelId: process.env.LINE_CHANNEL_ID || '',
+        apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
       },
       message: 'デフォルト設定を使用しています (MongoDB接続エラー)'
     });
