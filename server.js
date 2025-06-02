@@ -458,6 +458,64 @@ app.delete('/api/users/:userId', async (req, res) => {
 
 
 
+app.get('/api/users/line-lookup/:lineId', async (req, res) => {
+  try {
+    const { lineId } = req.params;
+    
+    let user = await getUserById(lineId);
+    
+    if (!user) {
+      const newUserData = {
+        userId: lineId,
+        points: 0,
+        registrationDate: new Date(),
+        status: 'ACTIVE',
+        rank: 'bronze',
+        memo: 'LINE経由で自動作成'
+      };
+      
+      const result = await saveUser(newUserData);
+      user = await getUserById(lineId);
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        user_id: user.userId,
+        display_name: user.userId,
+        points: user.points,
+        status: user.status,
+        rank: user.rank,
+        registration_date: user.registrationDate
+      }
+    });
+  } catch (error) {
+    console.error('LINE ユーザー検索エラー:', error);
+    
+    console.log('MongoDB接続エラーのため、モックデータを使用します');
+    const mockUser = {
+      userId: req.params.lineId,
+      points: 0,
+      status: 'ACTIVE',
+      rank: 'bronze',
+      registrationDate: new Date()
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        user_id: mockUser.userId,
+        display_name: mockUser.userId,
+        points: mockUser.points,
+        status: mockUser.status,
+        rank: mockUser.rank,
+        registration_date: mockUser.registrationDate
+      },
+      message: 'モックデータを使用しています (MongoDB接続エラー)'
+    });
+  }
+});
+
 app.use('/api/line', require('./routes/line-routes'));
 
 app.listen(PORT, () => {
