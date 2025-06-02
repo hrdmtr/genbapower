@@ -2,7 +2,7 @@ let liffId = 'dummy_liff_id';
 let lineUserId = null;
 let userProfile = null;
 let appMode = 'local';
-let apiBaseUrl = '/api/line';
+let apiBaseUrl = '/api/users';
 
 document.addEventListener('DOMContentLoaded', () => {
   fetchEnvironmentSettings();
@@ -16,7 +16,7 @@ async function fetchEnvironmentSettings() {
       const data = await response.json();
       if (data.success && data.data) {
         if (data.data.baseUrl) {
-          apiBaseUrl = `${data.data.baseUrl}/api/line`;
+          apiBaseUrl = `${data.data.baseUrl}/api/users`;
         }
         
         if (data.data.appMode) {
@@ -88,7 +88,7 @@ async function fetchUserInfo() {
       }
     }
     
-    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`, {
+    const response = await fetch(`${apiBaseUrl}/line-lookup/${lineUserId}`, {
       headers
     });
     
@@ -110,8 +110,8 @@ async function fetchUserInfo() {
 }
 
 function displayUserInfo(user) {
-  document.getElementById('display-name').textContent = user.display_name;
-  document.getElementById('point-balance').textContent = user.point_balance;
+  document.getElementById('display-name').textContent = user.display_name || user.user_id;
+  document.getElementById('point-balance').textContent = user.points || 0;
 }
 
 function showError(message) {
