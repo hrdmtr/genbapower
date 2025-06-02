@@ -31,6 +31,16 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, '/')));
 
+app.get('/members/profile', (req, res) => {
+  const APP_MODE = process.env.APP_MODE || 'development';
+  
+  if (APP_MODE === 'local') {
+    console.log('ローカルモード: /members認証をバイパスします');
+  }
+  
+  res.sendFile(path.join(__dirname, 'members', 'profile.html'));
+});
+
 connectToMongoDB().catch(console.error);
 
 app.post('/api/orders', async (req, res) => {

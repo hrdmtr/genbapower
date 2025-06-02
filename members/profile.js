@@ -1,0 +1,156 @@
+let liffId = 'dummy_liff_id';
+let lineUserId = null;
+let userProfile = null;
+let appMode = 'local';
+let apiBaseUrl = '/api/line';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await fetchEnvironmentSettings();
+  initializeLIFF();
+});
+
+async function fetchEnvironmentSettings() {
+  try {
+    const response = await fetch('/api/server-settings');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.data) {
+        if (data.data.baseUrl) {
+          apiBaseUrl = `${data.data.baseUrl}/api/line`;
+        }
+        
+        if (data.data.appMode) {
+          appMode = data.data.appMode;
+        }
+        
+        if (data.data.liffId) {
+          liffId = data.data.liffId;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('環境設定の読み込みエラー:', error);
+  }
+}
+
+async function initializeLIFF() {
+  try {
+    showLoading();
+    
+    if (appMode === 'local') {
+      console.log('ローカルモード: LIFF認証をバイパスします');
+      document.getElementById('auth-error').classList.remove('d-none');
+      
+      lineUserId = 'U1234567890abcdef';
+      userProfile = {
+        userId: lineUserId,
+        displayName: 'テストユーザー'
+      };
+      
+      await fetchUserInfo();
+      hideLoading();
+    } else {
+      await liff.init({ liffId });
+      
+      if (!liff.isLoggedIn()) {
+        const redirectUri = window.location.origin + '/member-top.html';
+        liff.login({ redirectUri });
+        return;
+      }
+      
+      if (!liff.isInClient()) {
+        document.getElementById('auth-error').classList.remove('d-none');
+        document.getElementById('main-content').classList.add('d-none');
+        hideLoading();
+        return;
+      }
+      
+      userProfile = await liff.getProfile();
+      lineUserId = userProfile.userId;
+      
+      await fetchUserInfo();
+      hideLoading();
+    }
+  } catch (error) {
+    console.error('LIFF初期化エラー:', error);
+    document.getElementById('auth-error').classList.remove('d-none');
+    document.getElementById('auth-error').textContent = `エラーが発生しました: ${error.message}`;
+    hideLoading();
+  }
+}
+
+async function fetchUserInfo() {
+  try {
+    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    
+    if (!response.ok) {
+      throw new Error('ユーザー情報の取得に失敗しました');
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      displayUserInfo(data.data);
+      generateQRCode(lineUserId);
+    } else {
+      throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
+    }
+  } catch (error) {
+    console.error('ユーザー情報取得エラー:', error);
+    showError(error.message);
+  }
+}
+
+function displayUserInfo(user) {
+  document.getElementById('display-name').textContent = user.display_name;
+  document.getElementById('member-id').textContent = user.user_id;
+  document.getElementById('point-balance').textContent = user.point_balance;
+  
+  const rankBadge = document.getElementById('rank-badge');
+  rankBadge.textContent = user.member_rank.toUpperCase();
+  rankBadge.className = 'rank-badge';
+  
+  switch (user.member_rank) {
+    case 'bronze':
+      rankBadge.classList.add('rank-bronze');
+      break;
+    case 'silver':
+      rankBadge.classList.add('rank-silver');
+      break;
+    case 'gold':
+      rankBadge.classList.add('rank-gold');
+      break;
+  }
+}
+
+function generateQRCode(userId) {
+  const qrcodeElement = document.getElementById('qrcode');
+  qrcodeElement.innerHTML = '';
+  
+  QRCode.toCanvas(qrcodeElement, userId, {
+    width: 200,
+    margin: 1,
+    color: {
+      dark: '#000000',
+      light: '#ffffff'
+    }
+  }, function(error) {
+    if (error) {
+      console.error('QRコード生成エラー:', error);
+    }
+  });
+}
+
+function showError(message) {
+  const errorElement = document.getElementById('auth-error');
+  errorElement.textContent = message;
+  errorElement.classList.remove('d-none');
+}
+
+function showLoading() {
+  document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
