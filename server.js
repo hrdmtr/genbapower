@@ -29,8 +29,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, '/')));
-
 app.get('/members/profile', (req, res) => {
   const APP_MODE = process.env.APP_MODE || 'development';
   
@@ -40,6 +38,8 @@ app.get('/members/profile', (req, res) => {
   
   res.sendFile(path.join(__dirname, 'members', 'profile.html'));
 });
+
+app.use(express.static(path.join(__dirname, '/')));
 
 connectToMongoDB().catch(console.error);
 
