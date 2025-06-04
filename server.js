@@ -30,13 +30,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/members/profile', (req, res) => {
+  console.log('=== /members/profile route accessed ===');
+  console.log('Request URL:', req.url);
+  console.log('Request method:', req.method);
+  console.log('Request headers:', req.headers);
+  
   const APP_MODE = process.env.APP_MODE || 'development';
+  console.log('Current APP_MODE:', APP_MODE);
   
   if (APP_MODE === 'local') {
     console.log('ローカルモード: /members認証をバイパスします');
   }
   
-  res.sendFile(path.join(__dirname, 'members', 'profile.html'));
+  const filePath = path.join(__dirname, 'members', 'profile.html');
+  console.log('Attempting to serve file:', filePath);
+  
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error serving profile.html:', err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      console.log('Successfully served profile.html');
+    }
+  });
 });
 
 app.use(express.static(path.join(__dirname, '/')));
