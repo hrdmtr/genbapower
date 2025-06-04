@@ -29,6 +29,32 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get('/version', (req, res) => {
+  const { execSync } = require('child_process');
+  
+  try {
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    const commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    const shortCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    const lastCommitDate = execSync('git log -1 --format=%cd --date=iso', { encoding: 'utf8' }).trim();
+    
+    const versionInfo = {
+      branch: branch,
+      commit: commit,
+      shortCommit: shortCommit,
+      lastCommitDate: lastCommitDate,
+      appMode: process.env.APP_MODE || 'development',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('Version endpoint accessed:', versionInfo);
+    res.json(versionInfo);
+  } catch (error) {
+    console.error('Error getting version info:', error);
+    res.status(500).json({ error: 'Unable to get version information' });
+  }
+});
+
 app.get('/members/profile', (req, res) => {
   console.log('=== /members/profile route accessed ===');
   console.log('Request URL:', req.url);
