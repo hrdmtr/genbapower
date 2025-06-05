@@ -79,7 +79,7 @@ async function initializeLIFF() {
       await liff.init({ liffId });
       
       if (!liff.isLoggedIn()) {
-        const redirectUri = window.location.origin + '/member-top.html';
+        const redirectUri = window.location.origin + '/members/profile';
         liff.login({ redirectUri });
         return;
       }
