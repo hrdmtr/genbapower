@@ -60,57 +60,10 @@ app.get('/version', (req, res) => {
   }
 });
 
-console.log('Applying authentication middleware to /members routes...');
-app.use('/members', (req, res, next) => {
-  console.log(`=== Authentication check for ${req.path} ===`);
-  
-  const APP_MODE = process.env.APP_MODE || 'development';
-  console.log('Current APP_MODE:', APP_MODE);
-  
-  if (APP_MODE === 'local') {
-    console.log('ローカルモード: /members認証をバイパスします');
-    req.lineUser = {
-      userId: 'U1234567890abcdef',
-      displayName: 'テストユーザー'
-    };
-    return next();
-  }
-  
-  const lineAccessToken = req.headers['x-line-access-token'];
-  
-  const query = req.query || {};
-  const body = req.body || {};
-  const params = req.params || {};
-  const userId = query.user_id || body.user_id || params.userId;
-  
-  console.log('LINE Access Token:', lineAccessToken ? 'あり' : 'なし');
-  console.log('User ID from request:', userId);
-  console.log('Request objects:', { 
-    hasQuery: !!req.query, 
-    hasBody: !!req.body, 
-    hasParams: !!req.params,
-    path: req.path,
-    method: req.method
-  });
-  
-  if (!lineAccessToken && !userId) {
-    console.log('認証が必要です - LINEログインページにリダイレクト');
-    return res.redirect('/member-top.html');
-  }
-  
-  req.lineUser = {
-    userId: userId || 'authenticated_user',
-    displayName: 'LINE User'
-  };
-  
-  console.log('認証成功:', req.lineUser);
-  next();
-});
-
 console.log('Registering /members/profile endpoint...');
 app.get('/members/profile', (req, res) => {
   console.log('=== /members/profile route accessed ===');
-  console.log('Authenticated user:', req.lineUser);
+  console.log('Serving profile.html without authentication check');
   
   const filePath = path.join(__dirname, 'members', 'profile.html');
   console.log('Attempting to serve file:', filePath);
@@ -695,7 +648,7 @@ app.get('/api/server-settings', async (req, res) => {
         baseUrlDescription: 'APIリクエストのベースURL',
         recordsPerPage: 20,
         recordsPerPageDescription: '1ページあたりの表示件数',
-        appMode: process.env.APP_MODE || 'local',
+        appMode: process.env.APP_MODE || 'development',
         liffId: process.env.LIFF_ID || 'dummy_liff_id',
         lineChannelId: process.env.LINE_CHANNEL_ID || '',
         apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
