@@ -104,7 +104,25 @@ async function initializeLIFF() {
 
 async function fetchUserInfo() {
   try {
-    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (appMode !== 'local' && liff.getAccessToken) {
+      const accessToken = liff.getAccessToken();
+      if (accessToken) {
+        headers['x-line-access-token'] = accessToken;
+        console.log('LINE Access Token added to request headers');
+      }
+    }
+    
+    console.log('Fetching user info with headers:', Object.keys(headers));
+    console.log('Request URL:', `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    
+    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`, {
+      method: 'GET',
+      headers: headers
+    });
     
     if (!response.ok) {
       throw new Error('ユーザー情報の取得に失敗しました');
