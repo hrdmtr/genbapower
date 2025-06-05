@@ -37,6 +37,12 @@ async function initializeLIFF() {
   try {
     showLoading();
     
+    console.log('=== 認証初期化開始 ===');
+    console.log('appMode:', appMode);
+    console.log('liffId:', liffId);
+    console.log('現在のURL:', window.location.href);
+    console.log('Referrer:', document.referrer);
+    
     if (appMode === 'local') {
       console.log('ローカルモード: LIFF認証をバイパスします');
       document.getElementById('auth-error').innerHTML = '<div class="alert alert-info">ローカルモード: 認証をバイパスして動作しています</div>';
@@ -50,66 +56,84 @@ async function initializeLIFF() {
       
       await fetchUserInfo();
       hideLoading();
-    } else {
-      await liff.init({ liffId });
+      return;
+    }
+    
+    if (liffId === 'dummy_liff_id') {
+      console.log('DUMMY LIFF_ID検出: 認証をバイパスしてプロフィール表示');
+      document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF設定未完了: 認証をバイパスして動作しています</div>';
+      document.getElementById('auth-error').classList.remove('d-none');
       
-      console.log('=== LINE認証状態チェック (profile.js) ===');
-      const isLoggedIn = liff.isLoggedIn();
-      console.log('liff.isLoggedIn():', isLoggedIn);
-      console.log('現在のURL:', window.location.href);
-      console.log('Referrer:', document.referrer);
-      
-      const cachedAuthState = checkAuthenticationState();
-      console.log('キャッシュされた認証状態:', cachedAuthState);
-      
-      if (!isLoggedIn && !cachedAuthState) {
-        console.log('未ログイン: メンバートップにリダイレクト');
-        
-        if (liffId === 'dummy_liff_id') {
-          console.log('LIFF_ID未設定: 認証をバイパスしてプロフィール表示');
-          lineUserId = 'U1234567890abcdef';
-          userProfile = {
-            userId: lineUserId,
-            displayName: 'テストユーザー（認証バイパス）'
-          };
-          await fetchUserInfo();
-          hideLoading();
-          return;
-        }
-        
-        if (!document.referrer.includes('/member-top.html')) {
-          console.log('直接アクセス: メンバートップページに移動');
-          window.location.href = '/member-top.html';
-          return;
-        }
-        const redirectUri = window.location.origin + '/member-top.html';
-        console.log('リダイレクト先:', redirectUri);
-        liff.login({ redirectUri });
-        return;
-      }
-      
-      if (isLoggedIn) {
-        console.log('ログイン済み: 認証状態をキャッシュ');
-        setAuthenticationState(true);
-      }
-      
-      console.log('ログイン済み: プロフィール情報を表示');
-      
-      if (!liff.isInClient()) {
-        document.getElementById('auth-error').classList.remove('d-none');
-        document.getElementById('main-content').classList.add('d-none');
-        hideLoading();
-        return;
-      }
-      
-      userProfile = await liff.getProfile();
-      lineUserId = userProfile.userId;
-      
+      lineUserId = 'U1234567890abcdef';
+      userProfile = {
+        userId: lineUserId,
+        displayName: 'テストユーザー（認証バイパス）'
+      };
       await fetchUserInfo();
       hideLoading();
+      return;
     }
+    
+    await liff.init({ liffId });
+    
+    console.log('=== LINE認証状態チェック (profile.js) ===');
+    const isLoggedIn = liff.isLoggedIn();
+    console.log('liff.isLoggedIn():', isLoggedIn);
+    
+    const cachedAuthState = checkAuthenticationState();
+    console.log('キャッシュされた認証状態:', cachedAuthState);
+    
+    if (!isLoggedIn && !cachedAuthState) {
+      console.log('未ログイン: メンバートップにリダイレクト');
+      
+      if (!document.referrer.includes('/member-top.html')) {
+        console.log('直接アクセス: メンバートップページに移動');
+        window.location.href = '/member-top.html';
+        return;
+      }
+      const redirectUri = window.location.origin + '/member-top.html';
+      console.log('リダイレクト先:', redirectUri);
+      liff.login({ redirectUri });
+      return;
+    }
+    
+    if (isLoggedIn) {
+      console.log('ログイン済み: 認証状態をキャッシュ');
+      setAuthenticationState(true);
+    }
+    
+    console.log('ログイン済み: プロフィール情報を表示');
+    
+    if (!liff.isInClient()) {
+      document.getElementById('auth-error').classList.remove('d-none');
+      document.getElementById('main-content').classList.add('d-none');
+      hideLoading();
+      return;
+    }
+    
+    userProfile = await liff.getProfile();
+    lineUserId = userProfile.userId;
+    
+    await fetchUserInfo();
+    hideLoading();
   } catch (error) {
     console.error('LIFF初期化エラー:', error);
+    
+    if (liffId === 'dummy_liff_id' || error.message.includes('LIFF')) {
+      console.log('LIFF初期化失敗: 認証をバイパスしてプロフィール表示');
+      document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF初期化失敗: 認証をバイパスして動作しています</div>';
+      document.getElementById('auth-error').classList.remove('d-none');
+      
+      lineUserId = 'U1234567890abcdef';
+      userProfile = {
+        userId: lineUserId,
+        displayName: 'テストユーザー（エラー回避）'
+      };
+      await fetchUserInfo();
+      hideLoading();
+      return;
+    }
+    
     document.getElementById('auth-error').classList.remove('d-none');
     document.getElementById('auth-error').textContent = `エラーが発生しました: ${error.message}`;
     hideLoading();
