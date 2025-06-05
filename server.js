@@ -29,6 +29,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+console.log('Registering /version endpoint...');
 app.get('/version', (req, res) => {
   const { execSync } = require('child_process');
   
@@ -55,6 +56,7 @@ app.get('/version', (req, res) => {
   }
 });
 
+console.log('Registering /members/profile endpoint...');
 app.get('/members/profile', (req, res) => {
   console.log('=== /members/profile route accessed ===');
   console.log('Request URL:', req.url);
@@ -79,6 +81,19 @@ app.get('/members/profile', (req, res) => {
       console.log('Successfully served profile.html');
     }
   });
+});
+
+app.get('/debug/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach(function(middleware) {
+    if (middleware.route) {
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    }
+  });
+  res.json({ routes: routes, timestamp: new Date().toISOString() });
 });
 
 app.use(express.static(path.join(__dirname, '/')));
