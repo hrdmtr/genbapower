@@ -150,18 +150,46 @@ function generateQRCode(userId) {
   const qrcodeElement = document.getElementById('qrcode');
   qrcodeElement.innerHTML = '';
   
-  QRCode.toCanvas(qrcodeElement, userId, {
-    width: 200,
-    margin: 1,
-    color: {
-      dark: '#000000',
-      light: '#ffffff'
+  let retryCount = 0;
+  const maxRetries = 10;
+  
+  function tryGenerateQR() {
+    if (typeof QRCode === 'undefined') {
+      retryCount++;
+      if (retryCount < maxRetries) {
+        console.log(`QRCode library not loaded yet, retrying... (${retryCount}/${maxRetries})`);
+        setTimeout(tryGenerateQR, 200);
+        return;
+      } else {
+        console.error('QRCode library failed to load after maximum retries');
+        qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
+        return;
+      }
     }
-  }, function(error) {
-    if (error) {
-      console.error('QRコード生成エラー:', error);
+    
+    try {
+      QRCode.toCanvas(qrcodeElement, userId, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      }, function(error) {
+        if (error) {
+          console.error('QRコード生成エラー:', error);
+          qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
+        } else {
+          console.log('QRコード生成成功');
+        }
+      });
+    } catch (error) {
+      console.error('QRCode generation exception:', error);
+      qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
     }
-  });
+  }
+  
+  tryGenerateQR();
 }
 
 function showError(message) {

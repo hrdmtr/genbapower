@@ -31,6 +31,8 @@ app.use(express.urlencoded({ extended: true }));
 
 const { lineAuthMiddleware } = require('./routes/line-routes');
 
+app.use('/api/line', require('./routes/line-routes'));
+
 console.log('Registering /version endpoint...');
 app.get('/version', (req, res) => {
   const { execSync } = require('child_process');
@@ -75,7 +77,10 @@ app.use('/members', (req, res, next) => {
   }
   
   const lineAccessToken = req.headers['x-line-access-token'];
-  const userId = req.query.user_id || req.body.user_id;
+  const userId = req.query.user_id || req.body.user_id || req.params.userId;
+  
+  console.log('LINE Access Token:', lineAccessToken ? 'あり' : 'なし');
+  console.log('User ID from request:', userId);
   
   if (!lineAccessToken && !userId) {
     console.log('認証が必要です - LINEログインページにリダイレクト');
@@ -623,7 +628,7 @@ app.get('/api/users/line-lookup/:lineId', async (req, res) => {
   }
 });
 
-app.use('/api/line', require('./routes/line-routes'));
+
 
 app.listen(PORT, () => {
   console.log(`サーバーが起動しました: http://localhost:${PORT}`);

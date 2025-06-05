@@ -9,11 +9,15 @@ const lineAuthMiddleware = (req, res, next) => {
   console.log(`=== バックエンド認証チェック ===`);
   console.log('リクエストパス:', req.path);
   console.log('APP_MODE:', APP_MODE);
+  console.log('Query params:', req.query);
+  console.log('Body params:', req.body);
   console.log('Headers:', Object.keys(req.headers));
   
   const body = req.body || {};
   const query = req.query || {};
   const userId = body.user_id || query.user_id || req.params.userId;
+  
+  console.log('Extracted user_id:', userId);
   
   if (APP_MODE === 'local') {
     console.log('ローカルモード: LINE認証をバイパスします');
