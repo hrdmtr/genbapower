@@ -77,10 +77,21 @@ app.use('/members', (req, res, next) => {
   }
   
   const lineAccessToken = req.headers['x-line-access-token'];
-  const userId = req.query.user_id || req.body.user_id || req.params.userId;
+  
+  const query = req.query || {};
+  const body = req.body || {};
+  const params = req.params || {};
+  const userId = query.user_id || body.user_id || params.userId;
   
   console.log('LINE Access Token:', lineAccessToken ? 'あり' : 'なし');
   console.log('User ID from request:', userId);
+  console.log('Request objects:', { 
+    hasQuery: !!req.query, 
+    hasBody: !!req.body, 
+    hasParams: !!req.params,
+    path: req.path,
+    method: req.method
+  });
   
   if (!lineAccessToken && !userId) {
     console.log('認証が必要です - LINEログインページにリダイレクト');
