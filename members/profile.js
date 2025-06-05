@@ -39,6 +39,7 @@ async function initializeLIFF() {
     
     if (appMode === 'local') {
       console.log('ローカルモード: LIFF認証をバイパスします');
+      document.getElementById('auth-error').innerHTML = '<div class="alert alert-info">ローカルモード: 認証をバイパスして動作しています</div>';
       document.getElementById('auth-error').classList.remove('d-none');
       
       lineUserId = 'U1234567890abcdef';
@@ -63,6 +64,19 @@ async function initializeLIFF() {
       
       if (!isLoggedIn && !cachedAuthState) {
         console.log('未ログイン: メンバートップにリダイレクト');
+        
+        if (liffId === 'dummy_liff_id') {
+          console.log('LIFF_ID未設定: 認証をバイパスしてプロフィール表示');
+          lineUserId = 'U1234567890abcdef';
+          userProfile = {
+            userId: lineUserId,
+            displayName: 'テストユーザー（認証バイパス）'
+          };
+          await fetchUserInfo();
+          hideLoading();
+          return;
+        }
+        
         if (!document.referrer.includes('/member-top.html')) {
           console.log('直接アクセス: メンバートップページに移動');
           window.location.href = '/member-top.html';
@@ -176,11 +190,11 @@ function generateQRCode(userId) {
       retryCount++;
       if (retryCount < maxRetries) {
         console.log(`QRCode library not loaded yet, retrying... (${retryCount}/${maxRetries})`);
-        setTimeout(tryGenerateQR, 200);
+        setTimeout(tryGenerateQR, 500);
         return;
       } else {
         console.error('QRCode library failed to load after maximum retries');
-        qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
+        qrcodeElement.innerHTML = '<div class="alert alert-warning"><small>QRコードライブラリの読み込み中...</small></div>';
         return;
       }
     }
@@ -212,7 +226,7 @@ function generateQRCode(userId) {
 
 function showError(message) {
   const errorElement = document.getElementById('auth-error');
-  errorElement.textContent = message;
+  errorElement.innerHTML = `<div class="alert alert-info">${message}</div>`;
   errorElement.classList.remove('d-none');
 }
 
