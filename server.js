@@ -29,6 +29,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const { lineAuthMiddleware } = require('./routes/line-routes');
+
 console.log('Registering /version endpoint...');
 app.get('/version', (req, res) => {
   const { execSync } = require('child_process');
@@ -56,19 +58,43 @@ app.get('/version', (req, res) => {
   }
 });
 
-console.log('Registering /members/profile endpoint...');
-app.get('/members/profile', (req, res) => {
-  console.log('=== /members/profile route accessed ===');
-  console.log('Request URL:', req.url);
-  console.log('Request method:', req.method);
-  console.log('Request headers:', req.headers);
+console.log('Applying authentication middleware to /members routes...');
+app.use('/members', (req, res, next) => {
+  console.log(`=== Authentication check for ${req.path} ===`);
   
   const APP_MODE = process.env.APP_MODE || 'development';
   console.log('Current APP_MODE:', APP_MODE);
   
   if (APP_MODE === 'local') {
     console.log('ローカルモード: /members認証をバイパスします');
+    req.lineUser = {
+      userId: 'U1234567890abcdef',
+      displayName: 'テストユーザー'
+    };
+    return next();
   }
+  
+  const lineAccessToken = req.headers['x-line-access-token'];
+  const userId = req.query.user_id || req.body.user_id;
+  
+  if (!lineAccessToken && !userId) {
+    console.log('認証が必要です - LINEログインページにリダイレクト');
+    return res.redirect('/member-top.html');
+  }
+  
+  req.lineUser = {
+    userId: userId || 'authenticated_user',
+    displayName: 'LINE User'
+  };
+  
+  console.log('認証成功:', req.lineUser);
+  next();
+});
+
+console.log('Registering /members/profile endpoint...');
+app.get('/members/profile', (req, res) => {
+  console.log('=== /members/profile route accessed ===');
+  console.log('Authenticated user:', req.lineUser);
   
   const filePath = path.join(__dirname, 'members', 'profile.html');
   console.log('Attempting to serve file:', filePath);

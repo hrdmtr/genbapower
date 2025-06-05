@@ -52,11 +52,34 @@ async function initializeLIFF() {
     } else {
       await liff.init({ liffId });
       
-      if (!liff.isLoggedIn()) {
+      console.log('=== LINE認証状態チェック (profile.js) ===');
+      const isLoggedIn = liff.isLoggedIn();
+      console.log('liff.isLoggedIn():', isLoggedIn);
+      console.log('現在のURL:', window.location.href);
+      console.log('Referrer:', document.referrer);
+      
+      const cachedAuthState = checkAuthenticationState();
+      console.log('キャッシュされた認証状態:', cachedAuthState);
+      
+      if (!isLoggedIn && !cachedAuthState) {
+        console.log('未ログイン: メンバートップにリダイレクト');
+        if (!document.referrer.includes('/member-top.html')) {
+          console.log('直接アクセス: メンバートップページに移動');
+          window.location.href = '/member-top.html';
+          return;
+        }
         const redirectUri = window.location.origin + '/member-top.html';
+        console.log('リダイレクト先:', redirectUri);
         liff.login({ redirectUri });
         return;
       }
+      
+      if (isLoggedIn) {
+        console.log('ログイン済み: 認証状態をキャッシュ');
+        setAuthenticationState(true);
+      }
+      
+      console.log('ログイン済み: プロフィール情報を表示');
       
       if (!liff.isInClient()) {
         document.getElementById('auth-error').classList.remove('d-none');
@@ -153,4 +176,27 @@ function showLoading() {
 
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
+}
+
+function checkAuthenticationState() {
+  const authState = sessionStorage.getItem('liff_auth_state');
+  const currentTime = Date.now();
+  
+  if (authState) {
+    const { timestamp, isAuthenticated } = JSON.parse(authState);
+    if (currentTime - timestamp < 300000 && isAuthenticated) {
+      console.log('キャッシュされた認証状態を使用');
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+function setAuthenticationState(isAuthenticated) {
+  const authState = {
+    timestamp: Date.now(),
+    isAuthenticated: isAuthenticated
+  };
+  sessionStorage.setItem('liff_auth_state', JSON.stringify(authState));
 }

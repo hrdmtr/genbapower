@@ -6,6 +6,11 @@ const { validateChargeTicket, useChargeTicket } = require('../services/charge-ti
 const lineAuthMiddleware = (req, res, next) => {
   const APP_MODE = process.env.APP_MODE || 'development';
   
+  console.log(`=== バックエンド認証チェック ===`);
+  console.log('リクエストパス:', req.path);
+  console.log('APP_MODE:', APP_MODE);
+  console.log('Headers:', Object.keys(req.headers));
+  
   const body = req.body || {};
   const query = req.query || {};
   const userId = body.user_id || query.user_id || req.params.userId;
@@ -18,24 +23,27 @@ const lineAuthMiddleware = (req, res, next) => {
       displayName: 'テストユーザー'
     };
     
+    console.log('設定されたユーザー:', req.lineUser);
     return next();
   }
   
   const lineAccessToken = req.headers['x-line-access-token'];
+  console.log('LINE Access Token:', lineAccessToken ? 'あり' : 'なし');
   
   if (!lineAccessToken) {
+    console.log('認証失敗: アクセストークンがありません');
     return res.status(401).json({
       success: false,
       message: 'LINE認証が必要です'
     });
   }
   
-  
   req.lineUser = {
     userId: userId,
     displayName: 'LINE User'
   };
   
+  console.log('認証成功:', req.lineUser);
   next();
 };
 
@@ -273,3 +281,4 @@ router.get('/transactions/:userId', lineAuthMiddleware, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.lineAuthMiddleware = lineAuthMiddleware;
