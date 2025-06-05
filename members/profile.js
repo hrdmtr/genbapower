@@ -11,26 +11,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function fetchEnvironmentSettings() {
   try {
+    console.log('=== Fetching Environment Settings ===');
     const response = await fetch('/api/server-settings');
+    console.log('Server settings response status:', response.status);
+    
     if (response.ok) {
       const data = await response.json();
+      console.log('Server settings data:', JSON.stringify(data, null, 2));
+      
       if (data.success && data.data) {
         if (data.data.baseUrl) {
           apiBaseUrl = `${data.data.baseUrl}/api/line`;
+          console.log('Updated apiBaseUrl:', apiBaseUrl);
         }
         
         if (data.data.appMode) {
           appMode = data.data.appMode;
+          console.log('Updated appMode:', appMode);
         }
         
         if (data.data.liffId) {
           liffId = data.data.liffId;
+          console.log('Updated liffId:', liffId);
         }
       }
+    } else {
+      console.error('Failed to fetch server settings:', response.status, response.statusText);
     }
   } catch (error) {
     console.error('環境設定の読み込みエラー:', error);
   }
+  
+  console.log('=== Final Environment Settings ===');
+  console.log('appMode:', appMode);
+  console.log('liffId:', liffId);
+  console.log('apiBaseUrl:', apiBaseUrl);
 }
 
 async function initializeLIFF() {
@@ -38,20 +53,24 @@ async function initializeLIFF() {
     showLoading();
     
     console.log('=== 認証初期化開始 ===');
-    console.log('appMode:', appMode);
-    console.log('liffId:', liffId);
+    console.log('Initial appMode:', appMode);
+    console.log('Initial liffId:', liffId);
     console.log('現在のURL:', window.location.href);
     console.log('Referrer:', document.referrer);
     
-    if (appMode === 'local') {
-      console.log('ローカルモード: LIFF認証をバイパスします');
-      document.getElementById('auth-error').innerHTML = '<div class="alert alert-info">ローカルモード: 認証をバイパスして動作しています</div>';
+    if (appMode === 'local' || liffId === 'dummy_liff_id') {
+      console.log('認証バイパス条件検出:', { appMode, liffId });
+      
+      const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';
+      const alertClass = appMode === 'local' ? 'alert-info' : 'alert-warning';
+      
+      document.getElementById('auth-error').innerHTML = `<div class="alert ${alertClass}">${bypassReason}: 認証をバイパスして動作しています</div>`;
       document.getElementById('auth-error').classList.remove('d-none');
       
       lineUserId = 'U1234567890abcdef';
       userProfile = {
         userId: lineUserId,
-        displayName: 'テストユーザー'
+        displayName: `テストユーザー（${bypassReason}）`
       };
       
       await fetchUserInfo();
@@ -59,15 +78,15 @@ async function initializeLIFF() {
       return;
     }
     
-    if (liffId === 'dummy_liff_id') {
-      console.log('DUMMY LIFF_ID検出: 認証をバイパスしてプロフィール表示');
-      document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF設定未完了: 認証をバイパスして動作しています</div>';
+    if (!liffId || liffId === 'dummy_liff_id') {
+      console.log('無効なLIFF_ID: 認証をバイパス');
+      document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF設定エラー: 認証をバイパスして動作しています</div>';
       document.getElementById('auth-error').classList.remove('d-none');
       
       lineUserId = 'U1234567890abcdef';
       userProfile = {
         userId: lineUserId,
-        displayName: 'テストユーザー（認証バイパス）'
+        displayName: 'テストユーザー（LIFF設定エラー）'
       };
       await fetchUserInfo();
       hideLoading();
@@ -118,24 +137,30 @@ async function initializeLIFF() {
     hideLoading();
   } catch (error) {
     console.error('LIFF初期化エラー:', error);
+    console.log('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      liffId: liffId,
+      appMode: appMode
+    });
     
-    if (liffId === 'dummy_liff_id' || error.message.includes('LIFF')) {
-      console.log('LIFF初期化失敗: 認証をバイパスしてプロフィール表示');
-      document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF初期化失敗: 認証をバイパスして動作しています</div>';
-      document.getElementById('auth-error').classList.remove('d-none');
-      
-      lineUserId = 'U1234567890abcdef';
-      userProfile = {
-        userId: lineUserId,
-        displayName: 'テストユーザー（エラー回避）'
-      };
+    console.log('LIFF初期化失敗: 認証をバイパスしてプロフィール表示');
+    document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF初期化失敗: 認証をバイパスして動作しています</div>';
+    document.getElementById('auth-error').classList.remove('d-none');
+    
+    lineUserId = 'U1234567890abcdef';
+    userProfile = {
+      userId: lineUserId,
+      displayName: 'テストユーザー（エラー回避）'
+    };
+    
+    try {
       await fetchUserInfo();
-      hideLoading();
-      return;
+    } catch (fetchError) {
+      console.error('ユーザー情報取得もエラー:', fetchError);
+      showError('認証とユーザー情報取得に失敗しました。管理者にお問い合わせください。');
     }
     
-    document.getElementById('auth-error').classList.remove('d-none');
-    document.getElementById('auth-error').textContent = `エラーが発生しました: ${error.message}`;
     hideLoading();
   }
 }
@@ -146,12 +171,18 @@ async function fetchUserInfo() {
       'Content-Type': 'application/json'
     };
     
-    if (appMode !== 'local' && liff.getAccessToken) {
-      const accessToken = liff.getAccessToken();
-      if (accessToken) {
-        headers['x-line-access-token'] = accessToken;
-        console.log('LINE Access Token added to request headers');
+    if (appMode !== 'local' && liffId !== 'dummy_liff_id' && typeof liff !== 'undefined' && liff.getAccessToken) {
+      try {
+        const accessToken = liff.getAccessToken();
+        if (accessToken) {
+          headers['x-line-access-token'] = accessToken;
+          console.log('LINE Access Token added to request headers');
+        }
+      } catch (liffError) {
+        console.log('LIFF Access Token取得エラー (バイパスモードで続行):', liffError.message);
       }
+    } else {
+      console.log('認証バイパスモード: LINE Access Tokenをスキップ');
     }
     
     console.log('Fetching user info with headers:', Object.keys(headers));
