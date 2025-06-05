@@ -85,15 +85,29 @@ app.get('/members/profile', (req, res) => {
 
 app.get('/debug/routes', (req, res) => {
   const routes = [];
-  app._router.stack.forEach(function(middleware) {
-    if (middleware.route) {
-      routes.push({
-        path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods)
-      });
-    }
+  
+  if (app._router && app._router.stack) {
+    app._router.stack.forEach(function(middleware) {
+      if (middleware.route) {
+        routes.push({
+          path: middleware.route.path,
+          methods: Object.keys(middleware.route.methods)
+        });
+      }
+    });
+  }
+  
+  const knownRoutes = [
+    { path: '/version', methods: ['get'] },
+    { path: '/members/profile', methods: ['get'] },
+    { path: '/debug/routes', methods: ['get'] }
+  ];
+  
+  res.json({ 
+    routes: routes.length > 0 ? routes : knownRoutes,
+    routerAvailable: !!(app._router && app._router.stack),
+    timestamp: new Date().toISOString() 
   });
-  res.json({ routes: routes, timestamp: new Date().toISOString() });
 });
 
 app.use(express.static(path.join(__dirname, '/')));
@@ -587,6 +601,15 @@ app.use('/api/line', require('./routes/line-routes'));
 
 app.listen(PORT, () => {
   console.log(`サーバーが起動しました: http://localhost:${PORT}`);
+  
+  try {
+    const { execSync } = require('child_process');
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    const shortCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    console.log(`バージョン情報: ${branch} (${shortCommit})`);
+  } catch (error) {
+    console.log('バージョン情報: 取得できませんでした');
+  }
 });
 
 process.on('SIGINT', async () => {
