@@ -105,6 +105,11 @@ app.get('/debug/routes', (req, res) => {
   });
 });
 
+app.get('/', (req, res) => {
+  console.log('Root access: redirecting to login page');
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 app.use(express.static(path.join(__dirname, '/')));
 
 connectToMongoDB().catch(console.error);

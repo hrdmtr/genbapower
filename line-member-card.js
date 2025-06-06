@@ -88,7 +88,14 @@ async function initializeLIFF() {
       console.log('キャッシュされた認証状態:', cachedAuthState);
       
       if (!isLoggedIn && !cachedAuthState) {
-        console.log('未ログイン: ログイン画面にリダイレクト');
+        console.log('未ログイン: ログインページにリダイレクト');
+        
+        if (!document.referrer.includes('/login.html') && !document.referrer.includes('liff.line.me')) {
+          console.log('直接アクセス: ログインページに移動');
+          window.location.href = '/login.html';
+          return;
+        }
+        
         const redirectUri = window.location.origin + '/member-top.html';
         console.log('リダイレクト先:', redirectUri);
         liff.login({ redirectUri });
