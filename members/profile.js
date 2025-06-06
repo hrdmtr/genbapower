@@ -3,12 +3,6 @@ let lineUserId = null;
 let userProfile = null;
 let appMode = 'local';
 let apiBaseUrl = '/api/line';
-<<<<<<< HEAD
-let transactions = [];
-let transactionPage = 0;
-let transactionLimit = 10;
-let hasMoreTransactions = true;
-let balanceChart = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await checkAuthentication();
@@ -35,27 +29,42 @@ async function checkAuthentication() {
       }
     }
 
-    if (appMode === 'local') {
-      console.log('ローカルモード: 認証チェックをバイパスします');
+    if (appMode === 'local' || liffId === 'dummy_liff_id') {
+      console.log('ローカルモード/dummy LIFF_ID: 認証チェックをバイパスします');
       return;
     }
 
     await liff.init({ liffId });
     
     if (!liff.isLoggedIn()) {
-      console.log('未認証ユーザーを /member-top.html にリダイレクトします');
-      window.location.href = '/member-top.html';
+      console.log('未認証ユーザー: ログインページにリダイレクト');
+      if (!document.referrer.includes('/member-top.html') && !document.referrer.includes('/login.html') && !document.referrer.includes('liff.line.me')) {
+        console.log('直接アクセス: ログインページに移動');
+        window.location.href = '/login.html';
+        return;
+      }
+      
+      if (document.referrer.includes('/member-top.html')) {
+        console.log('メンバートップから: メンバートップに戻る');
+        window.location.href = '/member-top.html';
+        return;
+      }
+      
+      const redirectUri = window.location.origin + '/member-top.html';
+      console.log('リダイレクト先:', redirectUri);
+      liff.login({ redirectUri });
       return;
     }
 
     if (!liff.isInClient()) {
-      console.log('LINEアプリ外からのアクセスを /member-top.html にリダイレクトします');
-      window.location.href = '/member-top.html';
+      console.log('LINEアプリ外からのアクセス: 認証エラー表示');
+      document.getElementById('auth-error').classList.remove('d-none');
+      document.getElementById('main-content').classList.add('d-none');
       return;
     }
   } catch (error) {
     console.error('認証チェックエラー:', error);
-    window.location.href = '/member-top.html';
+    window.location.href = '/login.html';
   }
 }
 
@@ -84,65 +93,101 @@ async function fetchEnvironmentSettings() {
 }
 
 function setupEventListeners() {
-  document.getElementById('scan-qr-btn').addEventListener('click', startQRScanner);
-  document.getElementById('cancel-scan-btn').addEventListener('click', stopQRScanner);
-  document.getElementById('charge-next-btn').addEventListener('click', validateTicket);
-  document.getElementById('back-to-step1-btn').addEventListener('click', backToStep1);
-  document.getElementById('confirm-charge-btn').addEventListener('click', executeCharge);
-  document.getElementById('back-to-home-btn').addEventListener('click', resetChargeFlow);
+  const scanQrBtn = document.getElementById('scan-qr-btn');
+  if (scanQrBtn) {
+    scanQrBtn.addEventListener('click', startQRScanner);
+  }
   
-  document.getElementById('history-tab').addEventListener('click', () => {
-    if (transactions.length === 0) {
-      loadTransactions();
-    }
-  });
+  const cancelScanBtn = document.getElementById('cancel-scan-btn');
+  if (cancelScanBtn) {
+    cancelScanBtn.addEventListener('click', stopQRScanner);
+  }
   
-  document.getElementById('load-more-btn').addEventListener('click', loadMoreTransactions);
+  const chargeNextBtn = document.getElementById('charge-next-btn');
+  if (chargeNextBtn) {
+    chargeNextBtn.addEventListener('click', validateTicket);
+  }
+  
+  const backToStep1Btn = document.getElementById('back-to-step1-btn');
+  if (backToStep1Btn) {
+    backToStep1Btn.addEventListener('click', backToStep1);
+  }
+  
+  const confirmChargeBtn = document.getElementById('confirm-charge-btn');
+  if (confirmChargeBtn) {
+    confirmChargeBtn.addEventListener('click', executeCharge);
+  }
+  
+  const backToHomeBtn = document.getElementById('back-to-home-btn');
+  if (backToHomeBtn) {
+    backToHomeBtn.addEventListener('click', resetChargeFlow);
+  }
+  
+  const historyTab = document.getElementById('history-tab');
+  if (historyTab) {
+    historyTab.addEventListener('click', () => {
+      if (transactions.length === 0) {
+        loadTransactions();
+      }
+    });
+  }
+  
+  const loadMoreBtn = document.getElementById('load-more-btn');
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', loadMoreTransactions);
+  }
 }
 
 async function initializeLIFF() {
   try {
     showLoading();
     
-    if (appMode === 'local') {
-      console.log('ローカルモード: LIFF認証をバイパスします');
-      document.getElementById('auth-error').classList.remove('d-none');
+    if (appMode === 'local' || liffId === 'dummy_liff_id') {
+      const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';
+      console.log(`${bypassReason}: LIFF認証をバイパスします`);
+      
+      const authError = document.getElementById('auth-error');
+      authError.textContent = `${bypassReason}: 認証をバイパスして動作しています`;
+      authError.classList.remove('d-none');
+      authError.classList.remove('alert-danger');
+      authError.classList.add('alert-info');
       
       lineUserId = 'U1234567890abcdef';
       userProfile = {
         userId: lineUserId,
-        displayName: 'テストユーザー'
+        displayName: 'テストユーザー（LIFF設定未完了）'
       };
       
-      await fetchUserInfo();
+      displayMockUserInfo();
       hideLoading();
-    } else {
-      await liff.init({ liffId });
-      
-      if (!liff.isLoggedIn()) {
-        const redirectUri = window.location.origin + '/member-top.html';
-        liff.login({ redirectUri });
-        return;
-      }
-      
-      if (!liff.isInClient()) {
-        document.getElementById('auth-error').classList.remove('d-none');
-        document.getElementById('main-content').classList.add('d-none');
-        hideLoading();
-        return;
-      }
-      
-      userProfile = await liff.getProfile();
-      lineUserId = userProfile.userId;
-      
-      await fetchUserInfo();
-      hideLoading();
+      return;
     }
+
+    await liff.init({ liffId });
+    
+    if (!liff.isLoggedIn()) {
+      const redirectUri = window.location.origin + '/member-top.html';
+      liff.login({ redirectUri });
+      return;
+    }
+    
+    if (!liff.isInClient()) {
+      document.getElementById('auth-error').classList.remove('d-none');
+      document.getElementById('main-content').classList.add('d-none');
+      hideLoading();
+      return;
+    }
+    
+    userProfile = await liff.getProfile();
+    lineUserId = userProfile.userId;
+    
+    await fetchUserInfo();
+    hideLoading();
+    
   } catch (error) {
     console.error('LIFF初期化エラー:', error);
     document.getElementById('auth-error').classList.remove('d-none');
     document.getElementById('auth-error').textContent = `エラーが発生しました: ${error.message}`;
- 
     hideLoading();
   }
 }
@@ -196,19 +241,46 @@ function generateQRCode(userId) {
   const qrcodeElement = document.getElementById('qrcode');
   qrcodeElement.innerHTML = '';
   
-<<<<<<< HEAD
-  QRCode.toCanvas(qrcodeElement, userId, {
-    width: 200,
-    margin: 1,
-    color: {
-      dark: '#000000',
-      light: '#ffffff'
+  let retryCount = 0;
+  const maxRetries = 10;
+  
+  function tryGenerateQR() {
+    if (typeof QRCode === 'undefined') {
+      retryCount++;
+      if (retryCount < maxRetries) {
+        console.log(`QRCode library not loaded yet, retrying... (${retryCount}/${maxRetries})`);
+        setTimeout(tryGenerateQR, 500);
+        return;
+      } else {
+        console.error('QRCode library failed to load after maximum retries');
+        qrcodeElement.innerHTML = '<div class="alert alert-warning"><small>QRコードライブラリの読み込み中...</small></div>';
+        return;
+      }
     }
-  }, function(error) {
-    if (error) {
-      console.error('QRコード生成エラー:', error);
+    
+    try {
+      QRCode.toCanvas(qrcodeElement, userId, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      }, function(error) {
+        if (error) {
+          console.error('QRコード生成エラー:', error);
+          qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
+        } else {
+          console.log('QRコード生成成功');
+        }
+      });
+    } catch (error) {
+      console.error('QRCode generation exception:', error);
+      qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
     }
-  });
+  }
+  
+  tryGenerateQR();
 }
 
 async function startQRScanner() {
@@ -560,60 +632,25 @@ function updateBalanceChart() {
 }
 
 function showError(message) {
-  const errorElement = document.getElementById('charge-error');
-  errorElement.textContent = message;
-=======
-  let retryCount = 0;
-  const maxRetries = 10;
-  
-  function tryGenerateQR() {
-    if (typeof QRCode === 'undefined') {
-      retryCount++;
-      if (retryCount < maxRetries) {
-        console.log(`QRCode library not loaded yet, retrying... (${retryCount}/${maxRetries})`);
-        setTimeout(tryGenerateQR, 500);
-        return;
-      } else {
-        console.error('QRCode library failed to load after maximum retries');
-        qrcodeElement.innerHTML = '<div class="alert alert-warning"><small>QRコードライブラリの読み込み中...</small></div>';
-        return;
-      }
-    }
-    
-    try {
-      QRCode.toCanvas(qrcodeElement, userId, {
-        width: 200,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
-        }
-      }, function(error) {
-        if (error) {
-          console.error('QRコード生成エラー:', error);
-          qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
-        } else {
-          console.log('QRコード生成成功');
-        }
-      });
-    } catch (error) {
-      console.error('QRCode generation exception:', error);
-      qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
-    }
-  }
-  
-  tryGenerateQR();
-}
-
-function showError(message) {
   const errorElement = document.getElementById('auth-error');
   errorElement.innerHTML = `<div class="alert alert-info">${message}</div>`;
->>>>>>> main
   errorElement.classList.remove('d-none');
 }
 
 function showLoading() {
   document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function displayMockUserInfo() {
+  document.getElementById('display-name').textContent = userProfile.displayName;
+  document.getElementById('member-id').textContent = lineUserId;
+  document.getElementById('point-balance').textContent = '1000';
+  
+  const rankBadge = document.getElementById('rank-badge');
+  rankBadge.textContent = 'SILVER';
+  rankBadge.className = 'rank-badge rank-silver';
+  
+  generateQRCode(lineUserId);
 }
 
 function hideLoading() {

@@ -15,92 +15,6 @@
       border-radius: 15px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-<<<<<<< HEAD
-    .member-card {
-      background: linear-gradient(135deg, #06c755 0%, #00b900 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 15px;
-      margin-bottom: 20px;
-    }
-    .qr-container {
-      background-color: white;
-      padding: 15px;
-      border-radius: 10px;
-      display: inline-block;
-      margin: 10px auto;
-    }
-    .rank-badge {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 0.8rem;
-      font-weight: bold;
-      margin-left: 10px;
-    }
-    .rank-bronze {
-      background-color: #cd7f32;
-    }
-    .rank-silver {
-      background-color: #c0c0c0;
-    }
-    .rank-gold {
-      background-color: #ffd700;
-      color: #333;
-    }
-    .tab-content {
-      padding: 20px 0;
-    }
-    .transaction-item {
-      border-left: 4px solid #ddd;
-      padding: 10px 15px;
-      margin-bottom: 10px;
-      background-color: white;
-      border-radius: 5px;
-    }
-    .transaction-charge {
-      border-left-color: #28a745;
-    }
-    .transaction-use {
-      border-left-color: #dc3545;
-    }
-    .transaction-expire {
-      border-left-color: #6c757d;
-    }
-    .charge-form {
-      background-color: white;
-      padding: 20px;
-      border-radius: 15px;
-      margin-bottom: 20px;
-    }
-    .camera-container {
-      width: 100%;
-      height: 300px;
-      background-color: #333;
-      position: relative;
-      overflow: hidden;
-      border-radius: 10px;
-    }
-    #camera-view {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .scan-line {
-      position: absolute;
-      width: 100%;
-      height: 2px;
-      background-color: #06c755;
-      top: 50%;
-      animation: scan 2s infinite;
-    }
-    @keyframes scan {
-      0% { top: 20%; }
-      50% { top: 80%; }
-      100% { top: 20%; }
-    }
-=======
->>>>>>> main
     .loading-overlay {
       position: fixed;
       top: 0;
@@ -117,26 +31,6 @@
       width: 3rem;
       height: 3rem;
     }
-<<<<<<< HEAD
-    .error-message {
-      color: #dc3545;
-      margin-top: 10px;
-    }
-    .success-message {
-      color: #28a745;
-      margin-top: 10px;
-    }
-    .navbar-brand {
-      display: flex;
-      align-items: center;
-    }
-    .navbar-brand img {
-      margin-right: 10px;
-    }
-    .chart-container {
-      height: 300px;
-      margin-bottom: 20px;
-=======
     .rank-badge {
       padding: 4px 8px;
       border-radius: 12px;
@@ -154,7 +48,6 @@
     .rank-gold {
       background-color: #ffd700;
       color: black;
->>>>>>> main
     }
   </style>
 </head>
@@ -174,23 +67,10 @@
             <a class="nav-link" href="../index.html">ホーム</a>
           </li>
           <li class="nav-item">
-<<<<<<< HEAD
-            <a class="nav-link" href="../products-management.html">商品管理</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="../users-management.html">ユーザー管理</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active" href="profile.html">会員プロファイル</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="../settings.html">設定</a>
-=======
             <a class="nav-link" href="../member-top.html">メンバートップ</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="../line-member-card.html">LINE会員証</a>
->>>>>>> main
           </li>
         </ul>
       </div>
@@ -209,117 +89,6 @@
     </div>
 
     <div class="row" id="main-content">
-<<<<<<< HEAD
-      <div class="col-md-12">
-        <div class="card">
-          <div class="card-body">
-            <h2 class="card-title mb-4">会員プロファイル</h2>
-            
-            <div class="member-card text-center">
-              <h3>
-                <span id="display-name">ユーザー名</span>
-                <span class="rank-badge" id="rank-badge">BRONZE</span>
-              </h3>
-              <div class="qr-container">
-                <div id="qrcode"></div>
-              </div>
-              <div class="mt-3">
-                <h4>会員ID: <span id="member-id">U1234567890abcdef</span></h4>
-                <h4>ポイント残高: <span id="point-balance">0</span> pt</h4>
-              </div>
-            </div>
-
-            <ul class="nav nav-tabs" id="memberTabs" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="charge-tab" data-bs-toggle="tab" data-bs-target="#charge" type="button" role="tab">
-                  <i class="bi bi-cash-coin"></i> チャージ
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
-                  <i class="bi bi-clock-history"></i> 利用履歴
-                </button>
-              </li>
-            </ul>
-
-            <div class="tab-content" id="memberTabsContent">
-              <div class="tab-pane fade show active" id="charge" role="tabpanel">
-                <div class="charge-form">
-                  <h4 class="mb-3">ポイントチャージ</h4>
-                  
-                  <div id="charge-step-1">
-                    <p>チャージ券のQRコードをスキャンするか、チケットIDを入力してください。</p>
-                    <div class="d-grid gap-2 mb-3">
-                      <button class="btn btn-success" id="scan-qr-btn">
-                        <i class="bi bi-qr-code-scan"></i> QRコードをスキャン
-                      </button>
-                    </div>
-                    <div class="mb-3">
-                      <label for="ticket-id" class="form-label">チケットID</label>
-                      <input type="text" class="form-control" id="ticket-id" placeholder="TICKET123456789">
-                    </div>
-                    <div class="mb-3">
-                      <label for="passcode" class="form-label">認証コード</label>
-                      <input type="text" class="form-control" id="passcode" placeholder="123456">
-                    </div>
-                    <div class="d-grid gap-2">
-                      <button class="btn btn-primary" id="charge-next-btn">次へ</button>
-                    </div>
-                    <div class="error-message mt-3 d-none" id="charge-error"></div>
-                  </div>
-
-                  <div id="qr-scanner" class="d-none">
-                    <div class="camera-container mb-3">
-                      <video id="camera-view" autoplay playsinline></video>
-                      <div class="scan-line"></div>
-                    </div>
-                    <div class="d-grid gap-2">
-                      <button class="btn btn-secondary" id="cancel-scan-btn">キャンセル</button>
-                    </div>
-                  </div>
-
-                  <div id="charge-step-2" class="d-none">
-                    <div class="alert alert-info">
-                      <h5>チャージ内容確認</h5>
-                      <p>チケットID: <span id="confirm-ticket-id"></span></p>
-                      <p>チャージ金額: <span id="confirm-amount"></span>円</p>
-                    </div>
-                    <div class="d-grid gap-2">
-                      <button class="btn btn-success" id="confirm-charge-btn">チャージを実行</button>
-                      <button class="btn btn-secondary" id="back-to-step1-btn">戻る</button>
-                    </div>
-                  </div>
-
-                  <div id="charge-step-3" class="d-none">
-                    <div class="alert alert-success">
-                      <h5><i class="bi bi-check-circle"></i> チャージ完了</h5>
-                      <p>チャージ金額: <span id="complete-amount"></span>円</p>
-                      <p>新しい残高: <span id="new-balance"></span>ポイント</p>
-                      <p id="rank-up-message" class="d-none">おめでとうございます！会員ランクが <span id="new-rank"></span> にアップグレードしました！</p>
-                    </div>
-                    <div class="d-grid gap-2">
-                      <button class="btn btn-primary" id="back-to-home-btn">ホームに戻る</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tab-pane fade" id="history" role="tabpanel">
-                <div class="chart-container">
-                  <canvas id="balance-chart"></canvas>
-                </div>
-                <h4 class="mb-3">取引履歴</h4>
-                <div id="transaction-list">
-                  <div class="text-center py-5" id="loading-transactions">
-                    <div class="spinner-border text-secondary" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="d-grid gap-2 mt-3 d-none" id="load-more-container">
-                  <button class="btn btn-outline-secondary" id="load-more-btn">もっと見る</button>
-                </div>
-=======
       <div class="col-md-8 mx-auto">
         <div class="card">
           <div class="card-header bg-success text-white">
@@ -351,7 +120,6 @@
                 <a href="../member-top.html" class="btn btn-outline-secondary">
                   <i class="bi bi-arrow-left"></i> メンバートップに戻る
                 </a>
->>>>>>> main
               </div>
             </div>
           </div>
@@ -361,14 +129,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-<<<<<<< HEAD
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-=======
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
->>>>>>> main
   <script src="profile.js"></script>
 </body>
 </html>
