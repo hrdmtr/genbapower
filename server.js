@@ -29,6 +29,87 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const { lineAuthMiddleware } = require('./routes/line-routes');
+
+app.use('/api/line', require('./routes/line-routes'));
+
+console.log('Registering /version endpoint...');
+app.get('/version', (req, res) => {
+  const { execSync } = require('child_process');
+  
+  try {
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    const commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    const shortCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    const lastCommitDate = execSync('git log -1 --format=%cd --date=iso', { encoding: 'utf8' }).trim();
+    
+    const versionInfo = {
+      branch: branch,
+      commit: commit,
+      shortCommit: shortCommit,
+      lastCommitDate: lastCommitDate,
+      appMode: process.env.APP_MODE || 'development',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('Version endpoint accessed:', versionInfo);
+    res.json(versionInfo);
+  } catch (error) {
+    console.error('Error getting version info:', error);
+    res.status(500).json({ error: 'Unable to get version information' });
+  }
+});
+
+console.log('Registering /members/profile endpoint...');
+app.get('/members/profile', (req, res) => {
+  console.log('=== /members/profile route accessed ===');
+  console.log('Serving profile.html without authentication check');
+  
+  const filePath = path.join(__dirname, 'members', 'profile.html');
+  console.log('Attempting to serve file:', filePath);
+  
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error serving profile.html:', err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      console.log('Successfully served profile.html');
+    }
+  });
+});
+
+app.get('/debug/routes', (req, res) => {
+  const routes = [];
+  
+  if (app._router && app._router.stack) {
+    app._router.stack.forEach(function(middleware) {
+      if (middleware.route) {
+        routes.push({
+          path: middleware.route.path,
+          methods: Object.keys(middleware.route.methods)
+        });
+      }
+    });
+  }
+  
+  const knownRoutes = [
+    { path: '/version', methods: ['get'] },
+    { path: '/members/profile', methods: ['get'] },
+    { path: '/debug/routes', methods: ['get'] }
+  ];
+  
+  res.json({ 
+    routes: routes.length > 0 ? routes : knownRoutes,
+    routerAvailable: !!(app._router && app._router.stack),
+    timestamp: new Date().toISOString() 
+  });
+});
+
+app.get('/', (req, res) => {
+  console.log('Root access: redirecting to login page');
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 app.use(express.static(path.join(__dirname, '/')));
 
 connectToMongoDB().catch(console.error);
@@ -516,10 +597,19 @@ app.get('/api/users/line-lookup/:lineId', async (req, res) => {
   }
 });
 
-app.use('/api/line', require('./routes/line-routes'));
+
 
 app.listen(PORT, () => {
   console.log(`サーバーが起動しました: http://localhost:${PORT}`);
+  
+  try {
+    const { execSync } = require('child_process');
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    const shortCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    console.log(`バージョン情報: ${branch} (${shortCommit})`);
+  } catch (error) {
+    console.log('バージョン情報: 取得できませんでした');
+  }
 });
 
 process.on('SIGINT', async () => {
@@ -563,7 +653,7 @@ app.get('/api/server-settings', async (req, res) => {
         baseUrlDescription: 'APIリクエストのベースURL',
         recordsPerPage: 20,
         recordsPerPageDescription: '1ページあたりの表示件数',
-        appMode: process.env.APP_MODE || 'local',
+        appMode: process.env.APP_MODE || 'development',
         liffId: process.env.LIFF_ID || 'dummy_liff_id',
         lineChannelId: process.env.LINE_CHANNEL_ID || '',
         apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'

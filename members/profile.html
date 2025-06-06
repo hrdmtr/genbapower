@@ -15,6 +15,7 @@
       border-radius: 15px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
+<<<<<<< HEAD
     .member-card {
       background: linear-gradient(135deg, #06c755 0%, #00b900 100%);
       color: white;
@@ -98,6 +99,8 @@
       50% { top: 80%; }
       100% { top: 20%; }
     }
+=======
+>>>>>>> main
     .loading-overlay {
       position: fixed;
       top: 0;
@@ -114,6 +117,7 @@
       width: 3rem;
       height: 3rem;
     }
+<<<<<<< HEAD
     .error-message {
       color: #dc3545;
       margin-top: 10px;
@@ -132,6 +136,25 @@
     .chart-container {
       height: 300px;
       margin-bottom: 20px;
+=======
+    .rank-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .rank-bronze {
+      background-color: #cd7f32;
+      color: white;
+    }
+    .rank-silver {
+      background-color: #c0c0c0;
+      color: black;
+    }
+    .rank-gold {
+      background-color: #ffd700;
+      color: black;
+>>>>>>> main
     }
   </style>
 </head>
@@ -151,6 +174,7 @@
             <a class="nav-link" href="../index.html">ホーム</a>
           </li>
           <li class="nav-item">
+<<<<<<< HEAD
             <a class="nav-link" href="../products-management.html">商品管理</a>
           </li>
           <li class="nav-item">
@@ -161,6 +185,12 @@
           </li>
           <li class="nav-item">
             <a class="nav-link" href="../settings.html">設定</a>
+=======
+            <a class="nav-link" href="../member-top.html">メンバートップ</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="../line-member-card.html">LINE会員証</a>
+>>>>>>> main
           </li>
         </ul>
       </div>
@@ -179,6 +209,7 @@
     </div>
 
     <div class="row" id="main-content">
+<<<<<<< HEAD
       <div class="col-md-12">
         <div class="card">
           <div class="card-body">
@@ -288,6 +319,39 @@
                 <div class="d-grid gap-2 mt-3 d-none" id="load-more-container">
                   <button class="btn btn-outline-secondary" id="load-more-btn">もっと見る</button>
                 </div>
+=======
+      <div class="col-md-8 mx-auto">
+        <div class="card">
+          <div class="card-header bg-success text-white">
+            <h4><i class="bi bi-person-circle"></i> プロフィール</h4>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h5>基本情報</h5>
+                <p><strong>表示名:</strong> <span id="display-name">-</span></p>
+                <p><strong>会員ID:</strong> <span id="member-id">-</span></p>
+                <p><strong>ポイント残高:</strong> <span id="point-balance">0</span> pt</p>
+                <p><strong>会員ランク:</strong> <span id="rank-badge" class="rank-badge">-</span></p>
+              </div>
+              <div class="col-md-6 text-center">
+                <h5>会員QRコード</h5>
+                <div id="qrcode"></div>
+              </div>
+            </div>
+            
+            <hr>
+            
+            <div class="row">
+              <div class="col-12">
+                <h5>アクション</h5>
+                <a href="../line-member-card.html" class="btn btn-success me-2">
+                  <i class="bi bi-credit-card"></i> 詳細な会員証を見る
+                </a>
+                <a href="../member-top.html" class="btn btn-outline-secondary">
+                  <i class="bi bi-arrow-left"></i> メンバートップに戻る
+                </a>
+>>>>>>> main
               </div>
             </div>
           </div>
@@ -297,9 +361,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<<<<<<< HEAD
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+=======
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+>>>>>>> main
   <script src="profile.js"></script>
 </body>
 </html>

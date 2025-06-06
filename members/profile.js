@@ -3,6 +3,7 @@ let lineUserId = null;
 let userProfile = null;
 let appMode = 'local';
 let apiBaseUrl = '/api/line';
+<<<<<<< HEAD
 let transactions = [];
 let transactionPage = 0;
 let transactionLimit = 10;
@@ -141,6 +142,7 @@ async function initializeLIFF() {
     console.error('LIFF初期化エラー:', error);
     document.getElementById('auth-error').classList.remove('d-none');
     document.getElementById('auth-error').textContent = `エラーが発生しました: ${error.message}`;
+ 
     hideLoading();
   }
 }
@@ -157,7 +159,7 @@ async function fetchUserInfo() {
     
     if (data.success) {
       displayUserInfo(data.data);
-      
+
       generateQRCode(lineUserId);
     } else {
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
@@ -194,6 +196,7 @@ function generateQRCode(userId) {
   const qrcodeElement = document.getElementById('qrcode');
   qrcodeElement.innerHTML = '';
   
+<<<<<<< HEAD
   QRCode.toCanvas(qrcodeElement, userId, {
     width: 200,
     margin: 1,
@@ -559,6 +562,53 @@ function updateBalanceChart() {
 function showError(message) {
   const errorElement = document.getElementById('charge-error');
   errorElement.textContent = message;
+=======
+  let retryCount = 0;
+  const maxRetries = 10;
+  
+  function tryGenerateQR() {
+    if (typeof QRCode === 'undefined') {
+      retryCount++;
+      if (retryCount < maxRetries) {
+        console.log(`QRCode library not loaded yet, retrying... (${retryCount}/${maxRetries})`);
+        setTimeout(tryGenerateQR, 500);
+        return;
+      } else {
+        console.error('QRCode library failed to load after maximum retries');
+        qrcodeElement.innerHTML = '<div class="alert alert-warning"><small>QRコードライブラリの読み込み中...</small></div>';
+        return;
+      }
+    }
+    
+    try {
+      QRCode.toCanvas(qrcodeElement, userId, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      }, function(error) {
+        if (error) {
+          console.error('QRコード生成エラー:', error);
+          qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
+        } else {
+          console.log('QRコード生成成功');
+        }
+      });
+    } catch (error) {
+      console.error('QRCode generation exception:', error);
+      qrcodeElement.innerHTML = '<p class="text-muted">QRコードの生成に失敗しました</p>';
+    }
+  }
+  
+  tryGenerateQR();
+}
+
+function showError(message) {
+  const errorElement = document.getElementById('auth-error');
+  errorElement.innerHTML = `<div class="alert alert-info">${message}</div>`;
+>>>>>>> main
   errorElement.classList.remove('d-none');
 }
 
