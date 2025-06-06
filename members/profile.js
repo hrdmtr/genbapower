@@ -5,106 +5,39 @@ let appMode = 'local';
 let apiBaseUrl = '/api/line';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await checkAuthentication();
+  
   await fetchEnvironmentSettings();
+  
+  setupEventListeners();
+  
   initializeLIFF();
 });
 
-async function fetchEnvironmentSettings() {
+async function checkAuthentication() {
   try {
-    console.log('=== Fetching Environment Settings ===');
     const response = await fetch('/api/server-settings');
-    console.log('Server settings response status:', response.status);
-    
     if (response.ok) {
       const data = await response.json();
-      console.log('Server settings data:', JSON.stringify(data, null, 2));
-      
       if (data.success && data.data) {
-        if (data.data.baseUrl) {
-          apiBaseUrl = `${data.data.baseUrl}/api/line`;
-          console.log('Updated apiBaseUrl:', apiBaseUrl);
-        }
-        
         if (data.data.appMode) {
           appMode = data.data.appMode;
-          console.log('Updated appMode:', appMode);
         }
-        
         if (data.data.liffId) {
           liffId = data.data.liffId;
-          console.log('Updated liffId:', liffId);
         }
       }
-    } else {
-      console.error('Failed to fetch server settings:', response.status, response.statusText);
     }
-  } catch (error) {
-    console.error('環境設定の読み込みエラー:', error);
-  }
-  
-  console.log('=== Final Environment Settings ===');
-  console.log('appMode:', appMode);
-  console.log('liffId:', liffId);
-  console.log('apiBaseUrl:', apiBaseUrl);
-}
 
-async function initializeLIFF() {
-  try {
-    showLoading();
-    
-    console.log('=== 認証初期化開始 ===');
-    console.log('Initial appMode:', appMode);
-    console.log('Initial liffId:', liffId);
-    console.log('現在のURL:', window.location.href);
-    console.log('Referrer:', document.referrer);
-    
     if (appMode === 'local' || liffId === 'dummy_liff_id') {
-      console.log('認証バイパス条件検出:', { appMode, liffId });
-      
-      const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';
-      const alertClass = appMode === 'local' ? 'alert-info' : 'alert-warning';
-      
-      document.getElementById('auth-error').innerHTML = `<div class="alert ${alertClass}">${bypassReason}: 認証をバイパスして動作しています</div>`;
-      document.getElementById('auth-error').classList.remove('d-none');
-      
-      lineUserId = 'U1234567890abcdef';
-      userProfile = {
-        userId: lineUserId,
-        displayName: `テストユーザー（${bypassReason}）`
-      };
-      
-      await fetchUserInfo();
-      hideLoading();
+      console.log('ローカルモード/dummy LIFF_ID: 認証チェックをバイパスします');
       return;
     }
-    
-    if (!liffId || liffId === 'dummy_liff_id') {
-      console.log('無効なLIFF_ID: 認証をバイパス');
-      document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF設定エラー: 認証をバイパスして動作しています</div>';
-      document.getElementById('auth-error').classList.remove('d-none');
-      
-      lineUserId = 'U1234567890abcdef';
-      userProfile = {
-        userId: lineUserId,
-        displayName: 'テストユーザー（LIFF設定エラー）'
-      };
-      await fetchUserInfo();
-      hideLoading();
-      return;
-    }
-    
+
     await liff.init({ liffId });
     
-    console.log('=== LINE認証状態チェック (profile.js) ===');
-    const isLoggedIn = liff.isLoggedIn();
-    console.log('liff.isLoggedIn():', isLoggedIn);
-    
-    const cachedAuthState = checkAuthenticationState();
-    console.log('キャッシュされた認証状態:', cachedAuthState);
-    
-    if (!isLoggedIn && !cachedAuthState) {
-      console.log('未ログイン: ログインページにリダイレクト');
-      
+    if (!liff.isLoggedIn()) {
+      console.log('未認証ユーザー: ログインページにリダイレクト');
       if (!document.referrer.includes('/member-top.html') && !document.referrer.includes('/login.html') && !document.referrer.includes('liff.line.me')) {
         console.log('直接アクセス: ログインページに移動');
         window.location.href = '/login.html';
@@ -122,13 +55,121 @@ async function initializeLIFF() {
       liff.login({ redirectUri });
       return;
     }
-    
-    if (isLoggedIn) {
-      console.log('ログイン済み: 認証状態をキャッシュ');
-      setAuthenticationState(true);
+
+    if (!liff.isInClient()) {
+      console.log('LINEアプリ外からのアクセス: 認証エラー表示');
+      document.getElementById('auth-error').classList.remove('d-none');
+      document.getElementById('main-content').classList.add('d-none');
+      return;
     }
+  } catch (error) {
+    console.error('認証チェックエラー:', error);
+    window.location.href = '/login.html';
+  }
+}
+
+async function fetchEnvironmentSettings() {
+  try {
+    const response = await fetch('/api/server-settings');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.data) {
+        if (data.data.baseUrl) {
+          apiBaseUrl = `${data.data.baseUrl}/api/line`;
+        }
+        
+        if (data.data.appMode) {
+          appMode = data.data.appMode;
+        }
+        
+        if (data.data.liffId) {
+          liffId = data.data.liffId;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('環境設定の読み込みエラー:', error);
+  }
+}
+
+function setupEventListeners() {
+  const scanQrBtn = document.getElementById('scan-qr-btn');
+  if (scanQrBtn) {
+    scanQrBtn.addEventListener('click', startQRScanner);
+  }
+  
+  const cancelScanBtn = document.getElementById('cancel-scan-btn');
+  if (cancelScanBtn) {
+    cancelScanBtn.addEventListener('click', stopQRScanner);
+  }
+  
+  const chargeNextBtn = document.getElementById('charge-next-btn');
+  if (chargeNextBtn) {
+    chargeNextBtn.addEventListener('click', validateTicket);
+  }
+  
+  const backToStep1Btn = document.getElementById('back-to-step1-btn');
+  if (backToStep1Btn) {
+    backToStep1Btn.addEventListener('click', backToStep1);
+  }
+  
+  const confirmChargeBtn = document.getElementById('confirm-charge-btn');
+  if (confirmChargeBtn) {
+    confirmChargeBtn.addEventListener('click', executeCharge);
+  }
+  
+  const backToHomeBtn = document.getElementById('back-to-home-btn');
+  if (backToHomeBtn) {
+    backToHomeBtn.addEventListener('click', resetChargeFlow);
+  }
+  
+  const historyTab = document.getElementById('history-tab');
+  if (historyTab) {
+    historyTab.addEventListener('click', () => {
+      if (transactions.length === 0) {
+        loadTransactions();
+      }
+    });
+  }
+  
+  const loadMoreBtn = document.getElementById('load-more-btn');
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', loadMoreTransactions);
+  }
+}
+
+async function initializeLIFF() {
+  try {
+    showLoading();
     
-    console.log('ログイン済み: プロフィール情報を表示');
+    if (appMode === 'local' || liffId === 'dummy_liff_id') {
+      const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';
+      console.log(`${bypassReason}: LIFF認証をバイパスします`);
+      
+      const authError = document.getElementById('auth-error');
+      authError.textContent = `${bypassReason}: 認証をバイパスして動作しています`;
+      authError.classList.remove('d-none');
+      authError.classList.remove('alert-danger');
+      authError.classList.add('alert-info');
+      
+      lineUserId = 'U1234567890abcdef';
+      userProfile = {
+        userId: lineUserId,
+        displayName: 'テストユーザー（LIFF設定未完了）'
+      };
+      
+      displayMockUserInfo();
+      hideLoading();
+      return;
+    }
+
+    await liff.init({ liffId });
+    
+    if (!liff.isLoggedIn()) {
+      const redirectUri = window.location.origin + '/member-top.html';
+      liff.login({ redirectUri });
+      return;
+    }
     
     if (!liff.isInClient()) {
       document.getElementById('auth-error').classList.remove('d-none');
@@ -142,63 +183,18 @@ async function initializeLIFF() {
     
     await fetchUserInfo();
     hideLoading();
+    
   } catch (error) {
     console.error('LIFF初期化エラー:', error);
-    console.log('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      liffId: liffId,
-      appMode: appMode
-    });
-    
-    console.log('LIFF初期化失敗: 認証をバイパスしてプロフィール表示');
-    document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF初期化失敗: 認証をバイパスして動作しています</div>';
     document.getElementById('auth-error').classList.remove('d-none');
-    
-    lineUserId = 'U1234567890abcdef';
-    userProfile = {
-      userId: lineUserId,
-      displayName: 'テストユーザー（エラー回避）'
-    };
-    
-    try {
-      await fetchUserInfo();
-    } catch (fetchError) {
-      console.error('ユーザー情報取得もエラー:', fetchError);
-      showError('認証とユーザー情報取得に失敗しました。管理者にお問い合わせください。');
-    }
-    
+    document.getElementById('auth-error').textContent = `エラーが発生しました: ${error.message}`;
     hideLoading();
   }
 }
 
 async function fetchUserInfo() {
   try {
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-    
-    if (appMode !== 'local' && liffId !== 'dummy_liff_id' && typeof liff !== 'undefined' && liff.getAccessToken) {
-      try {
-        const accessToken = liff.getAccessToken();
-        if (accessToken) {
-          headers['x-line-access-token'] = accessToken;
-          console.log('LINE Access Token added to request headers');
-        }
-      } catch (liffError) {
-        console.log('LIFF Access Token取得エラー (バイパスモードで続行):', liffError.message);
-      }
-    } else {
-      console.log('認証バイパスモード: LINE Access Tokenをスキップ');
-    }
-    
-    console.log('Fetching user info with headers:', Object.keys(headers));
-    console.log('Request URL:', `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
-    
-    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`, {
-      method: 'GET',
-      headers: headers
-    });
+    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
     
     if (!response.ok) {
       throw new Error('ユーザー情報の取得に失敗しました');
@@ -208,6 +204,7 @@ async function fetchUserInfo() {
     
     if (data.success) {
       displayUserInfo(data.data);
+
       generateQRCode(lineUserId);
     } else {
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
@@ -286,6 +283,354 @@ function generateQRCode(userId) {
   tryGenerateQR();
 }
 
+async function startQRScanner() {
+  try {
+    document.getElementById('charge-step-1').classList.add('d-none');
+    document.getElementById('qr-scanner').classList.remove('d-none');
+    
+    const constraints = {
+      video: {
+        facingMode: 'environment'
+      }
+    };
+    
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const videoElement = document.getElementById('camera-view');
+    videoElement.srcObject = stream;
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    let scanning = true;
+    
+    const scanQRCode = () => {
+      if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA && scanning) {
+        canvas.height = videoElement.videoHeight;
+        canvas.width = videoElement.videoWidth;
+        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        
+        
+        if (appMode === 'local') {
+          setTimeout(() => {
+            if (scanning) {
+              stopQRScanner();
+              document.getElementById('ticket-id').value = 'TICKET123456789';
+              document.getElementById('passcode').value = '123456';
+            }
+          }, 5000);
+        }
+        
+        requestAnimationFrame(scanQRCode);
+      } else if (scanning) {
+        requestAnimationFrame(scanQRCode);
+      }
+    };
+    
+    scanQRCode();
+  } catch (error) {
+    console.error('カメラアクセスエラー:', error);
+    stopQRScanner();
+    showError('カメラへのアクセスができませんでした');
+  }
+}
+
+function stopQRScanner() {
+  const videoElement = document.getElementById('camera-view');
+  if (videoElement.srcObject) {
+    const tracks = videoElement.srcObject.getTracks();
+    tracks.forEach(track => track.stop());
+    videoElement.srcObject = null;
+  }
+  
+  document.getElementById('qr-scanner').classList.add('d-none');
+  document.getElementById('charge-step-1').classList.remove('d-none');
+}
+
+async function validateTicket() {
+  const ticketId = document.getElementById('ticket-id').value.trim();
+  const passcode = document.getElementById('passcode').value.trim();
+  
+  if (!ticketId || !passcode) {
+    showError('チケットIDと認証コードを入力してください');
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    if (appMode === 'local' && ticketId === 'TICKET123456789' && passcode === '123456') {
+      document.getElementById('confirm-ticket-id').textContent = ticketId;
+      document.getElementById('confirm-amount').textContent = '1,000';
+      
+      document.getElementById('charge-step-1').classList.add('d-none');
+      document.getElementById('charge-step-2').classList.remove('d-none');
+      hideLoading();
+      return;
+    }
+    
+    
+    setTimeout(() => {
+      document.getElementById('confirm-ticket-id').textContent = ticketId;
+      document.getElementById('confirm-amount').textContent = '1,000';
+      
+      document.getElementById('charge-step-1').classList.add('d-none');
+      document.getElementById('charge-step-2').classList.remove('d-none');
+      hideLoading();
+    }, 1000);
+  } catch (error) {
+    console.error('チケット検証エラー:', error);
+    showError(error.message);
+    hideLoading();
+  }
+}
+
+async function executeCharge() {
+  const ticketId = document.getElementById('ticket-id').value.trim();
+  const passcode = document.getElementById('passcode').value.trim();
+  
+  try {
+    showLoading();
+    
+    const response = await fetch(`${apiBaseUrl}/charge`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: lineUserId,
+        ticket_id: ticketId,
+        passcode: passcode
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.success) {
+      document.getElementById('complete-amount').textContent = data.charged_amount.toLocaleString();
+      document.getElementById('new-balance').textContent = data.new_balance.toLocaleString();
+      
+      document.getElementById('point-balance').textContent = data.new_balance;
+      
+      const currentRank = document.getElementById('rank-badge').textContent.toLowerCase();
+      if (data.new_rank !== currentRank) {
+        document.getElementById('rank-up-message').classList.remove('d-none');
+        document.getElementById('new-rank').textContent = data.new_rank.toUpperCase();
+        
+        const rankBadge = document.getElementById('rank-badge');
+        rankBadge.textContent = data.new_rank.toUpperCase();
+        rankBadge.className = 'rank-badge';
+        
+        switch (data.new_rank) {
+          case 'bronze':
+            rankBadge.classList.add('rank-bronze');
+            break;
+          case 'silver':
+            rankBadge.classList.add('rank-silver');
+            break;
+          case 'gold':
+            rankBadge.classList.add('rank-gold');
+            break;
+        }
+      } else {
+        document.getElementById('rank-up-message').classList.add('d-none');
+      }
+      
+      document.getElementById('charge-step-2').classList.add('d-none');
+      document.getElementById('charge-step-3').classList.remove('d-none');
+      
+      transactions = [];
+      transactionPage = 0;
+      hasMoreTransactions = true;
+    } else {
+      throw new Error(data.message || 'チャージに失敗しました');
+    }
+    
+    hideLoading();
+  } catch (error) {
+    console.error('チャージ実行エラー:', error);
+    showError(error.message);
+    backToStep1();
+    hideLoading();
+  }
+}
+
+function resetChargeFlow() {
+  document.getElementById('ticket-id').value = '';
+  document.getElementById('passcode').value = '';
+  document.getElementById('charge-error').classList.add('d-none');
+  document.getElementById('charge-step-3').classList.add('d-none');
+  document.getElementById('charge-step-1').classList.remove('d-none');
+}
+
+function backToStep1() {
+  document.getElementById('charge-step-2').classList.add('d-none');
+  document.getElementById('charge-step-1').classList.remove('d-none');
+}
+
+async function loadTransactions() {
+  try {
+    document.getElementById('loading-transactions').classList.remove('d-none');
+    
+    const response = await fetch(`${apiBaseUrl}/transactions/${lineUserId}?limit=${transactionLimit}&offset=${transactionPage * transactionLimit}&user_id=${lineUserId}`);
+    
+    if (!response.ok) {
+      throw new Error('取引履歴の取得に失敗しました');
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      transactions = [...transactions, ...data.transactions];
+      
+      displayTransactions(data.transactions);
+      
+      hasMoreTransactions = transactions.length < data.total;
+      document.getElementById('load-more-container').classList.toggle('d-none', !hasMoreTransactions);
+      
+      updateBalanceChart();
+      
+      transactionPage++;
+    } else {
+      throw new Error(data.message || '取引履歴の取得に失敗しました');
+    }
+    
+    document.getElementById('loading-transactions').classList.add('d-none');
+  } catch (error) {
+    console.error('取引履歴取得エラー:', error);
+    document.getElementById('loading-transactions').classList.add('d-none');
+    document.getElementById('transaction-list').innerHTML += `
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i> ${error.message}
+      </div>
+    `;
+  }
+}
+
+function loadMoreTransactions() {
+  if (hasMoreTransactions) {
+    loadTransactions();
+  }
+}
+
+function displayTransactions(newTransactions) {
+  if (newTransactions.length === 0 && transactions.length === 0) {
+    document.getElementById('transaction-list').innerHTML = `
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill"></i> 取引履歴はありません
+      </div>
+    `;
+    return;
+  }
+  
+  if (transactions.length === newTransactions.length) {
+    document.getElementById('transaction-list').innerHTML = '';
+  }
+  
+  const transactionList = document.getElementById('transaction-list');
+  
+  newTransactions.forEach(transaction => {
+    const date = new Date(transaction.created_at);
+    const formattedDate = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    
+    let transactionClass = 'transaction-item';
+    let icon = '';
+    let amountText = '';
+    
+    switch (transaction.type) {
+      case 'charge':
+        transactionClass += ' transaction-charge';
+        icon = '<i class="bi bi-plus-circle-fill text-success"></i>';
+        amountText = `<span class="text-success">+${transaction.amount.toLocaleString()} pt</span>`;
+        break;
+      case 'use':
+        transactionClass += ' transaction-use';
+        icon = '<i class="bi bi-dash-circle-fill text-danger"></i>';
+        amountText = `<span class="text-danger">-${transaction.amount.toLocaleString()} pt</span>`;
+        break;
+      case 'expire':
+        transactionClass += ' transaction-expire';
+        icon = '<i class="bi bi-x-circle-fill text-secondary"></i>';
+        amountText = `<span class="text-secondary">-${transaction.amount.toLocaleString()} pt</span>`;
+        break;
+    }
+    
+    const transactionItem = document.createElement('div');
+    transactionItem.className = transactionClass;
+    transactionItem.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          ${icon} ${transaction.description}
+          <div class="text-muted small">${formattedDate}</div>
+        </div>
+        <div class="text-end">
+          ${amountText}
+          <div class="text-muted small">残高: ${transaction.balance_after.toLocaleString()} pt</div>
+        </div>
+      </div>
+    `;
+    
+    transactionList.appendChild(transactionItem);
+  });
+}
+
+function updateBalanceChart() {
+  if (transactions.length === 0) return;
+  
+  const sortedTransactions = [...transactions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  
+  const labels = sortedTransactions.map(t => {
+    const date = new Date(t.created_at);
+    return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+  });
+  
+  const balances = sortedTransactions.map(t => t.balance_after);
+  
+  if (balanceChart) {
+    balanceChart.destroy();
+  }
+  
+  const ctx = document.getElementById('balance-chart').getContext('2d');
+  balanceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'ポイント残高',
+        data: balances,
+        borderColor: '#06c755',
+        backgroundColor: 'rgba(6, 199, 85, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `残高: ${context.raw.toLocaleString()} pt`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return value.toLocaleString() + ' pt';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 function showError(message) {
   const errorElement = document.getElementById('auth-error');
   errorElement.innerHTML = `<div class="alert alert-info">${message}</div>`;
@@ -296,29 +641,18 @@ function showLoading() {
   document.getElementById('loading-overlay').style.display = 'flex';
 }
 
+function displayMockUserInfo() {
+  document.getElementById('display-name').textContent = userProfile.displayName;
+  document.getElementById('member-id').textContent = lineUserId;
+  document.getElementById('point-balance').textContent = '1000';
+  
+  const rankBadge = document.getElementById('rank-badge');
+  rankBadge.textContent = 'SILVER';
+  rankBadge.className = 'rank-badge rank-silver';
+  
+  generateQRCode(lineUserId);
+}
+
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
-}
-
-function checkAuthenticationState() {
-  const authState = sessionStorage.getItem('liff_auth_state');
-  const currentTime = Date.now();
-  
-  if (authState) {
-    const { timestamp, isAuthenticated } = JSON.parse(authState);
-    if (currentTime - timestamp < 300000 && isAuthenticated) {
-      console.log('キャッシュされた認証状態を使用');
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-function setAuthenticationState(isAuthenticated) {
-  const authState = {
-    timestamp: Date.now(),
-    isAuthenticated: isAuthenticated
-  };
-  sessionStorage.setItem('liff_auth_state', JSON.stringify(authState));
 }
