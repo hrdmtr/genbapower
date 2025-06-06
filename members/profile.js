@@ -238,6 +238,11 @@ function displayUserInfo(user) {
       rankBadge.classList.add('rank-gold');
       break;
   }
+  
+  document.getElementById('user-status').textContent = user.status || 'ACTIVE';
+  
+  const registrationDate = user.registration_date ? new Date(user.registration_date).toLocaleDateString('ja-JP') : '-';
+  document.getElementById('registration-date').textContent = registrationDate;
 }
 
 function generateQRCode(userId) {

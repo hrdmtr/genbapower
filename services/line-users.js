@@ -91,6 +91,7 @@ async function saveOrUpdateLineUser(lineUserData) {
         point_balance: lineUserData.point_balance || 0,
         member_rank: lineUserData.member_rank || 'bronze',
         total_charged: lineUserData.total_charged || 0,
+        status: lineUserData.status || 'ACTIVE',
         created_at: new Date(),
         updated_at: new Date()
       };

@@ -104,7 +104,9 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
             display_name: mockUser.display_name,
             point_balance: mockUser.point_balance,
             member_rank: mockUser.member_rank,
-            total_charged: mockUser.total_charged
+            total_charged: mockUser.total_charged,
+            status: 'ACTIVE',
+            registration_date: mockUser.created_at
           },
           message: '認証バイパスモード: テストユーザーを使用します'
         });
@@ -123,7 +125,9 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
         display_name: user.display_name,
         point_balance: user.point_balance,
         member_rank: user.member_rank,
-        total_charged: user.total_charged
+        total_charged: user.total_charged,
+        status: user.status || 'ACTIVE',
+        registration_date: user.created_at
       }
     });
   } catch (error) {
