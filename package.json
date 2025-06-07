@@ -1,0 +1,29 @@
+{
+  "name": "genbapower",
+  "version": "1.0.0",
+  "description": "## 概要 このアプリケーションは、USB接続されたQRコードリーダー（仮想COMポート型）からの入力を常時監視し、読み取ったQRコード内容をWeb APIにPOSTリクエストとして送信するブラウザベースのアプリケーションです。",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "test-db": "node utils/test-mongodb.js",
+    "test-db-esm": "node utils/test-mongodb.mjs",
+    "generate-ticket": "node utils/generate-ticket.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@line/liff": "^2.22.0",
+    "axios": "^1.3.4",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "mongodb": "^6.16.0",
+    "mongoose": "^8.0.0",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.0"
+  }
+}
