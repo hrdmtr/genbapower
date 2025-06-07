@@ -303,6 +303,9 @@ function displayUserInfo(user) {
   
   const registrationDate = user.registration_date ? new Date(user.registration_date).toLocaleDateString('ja-JP') : '-';
   document.getElementById('registration-date').textContent = registrationDate;
+  
+  document.getElementById('user-id').textContent = user.user_id || '-';
+  document.getElementById('user-memo').textContent = user.memo || '-';
 }
 
 function generateQRCode(userId) {
