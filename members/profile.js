@@ -11,41 +11,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function fetchEnvironmentSettings() {
   try {
-    console.log('=== Fetching Environment Settings ===');
+    console.log('=== DEBUG: Fetching Environment Settings ===');
     const response = await fetch('/api/server-settings');
     console.log('Server settings response status:', response.status);
     
     if (response.ok) {
       const data = await response.json();
+      console.log('=== DEBUG: Server settings data ===');
       console.log('Server settings data:', JSON.stringify(data, null, 2));
       
       if (data.success && data.data) {
+        console.log('=== DEBUG: Processing server settings ===');
+        
         if (data.data.baseUrl) {
+          const oldApiBaseUrl = apiBaseUrl;
           apiBaseUrl = `${data.data.baseUrl}/api/line`;
-          console.log('Updated apiBaseUrl:', apiBaseUrl);
+          console.log('Updated apiBaseUrl:', oldApiBaseUrl, '->', apiBaseUrl);
         }
         
         if (data.data.appMode) {
+          const oldAppMode = appMode;
           appMode = data.data.appMode;
-          console.log('Updated appMode:', appMode);
+          console.log('Updated appMode:', oldAppMode, '->', appMode);
         }
         
         if (data.data.liffId) {
+          const oldLiffId = liffId;
           liffId = data.data.liffId;
-          console.log('Updated liffId:', liffId);
+          console.log('Updated liffId:', oldLiffId, '->', liffId);
         }
+      } else {
+        console.log('=== DEBUG: Server settings response invalid ===');
+        console.log('data.success:', data.success);
+        console.log('data.data:', data.data);
       }
     } else {
+      console.error('=== DEBUG: Failed to fetch server settings ===');
       console.error('Failed to fetch server settings:', response.status, response.statusText);
     }
   } catch (error) {
+    console.error('=== DEBUG: 環境設定の読み込みエラー ===');
     console.error('環境設定の読み込みエラー:', error);
   }
   
-  console.log('=== Final Environment Settings ===');
-  console.log('appMode:', appMode);
-  console.log('liffId:', liffId);
-  console.log('apiBaseUrl:', apiBaseUrl);
+  console.log('=== DEBUG: Final Environment Settings ===');
+  console.log('appMode:', appMode, '(type:', typeof appMode, ')');
+  console.log('liffId:', liffId, '(type:', typeof liffId, ')');
+  console.log('apiBaseUrl:', apiBaseUrl, '(type:', typeof apiBaseUrl, ')');
 }
 
 async function initializeLIFF() {
@@ -58,11 +70,21 @@ async function initializeLIFF() {
     console.log('現在のURL:', window.location.href);
     console.log('Referrer:', document.referrer);
     
+    console.log('=== DEBUG: バイパス条件チェック ===');
+    console.log('appMode === "local":', appMode === 'local');
+    console.log('liffId === "dummy_liff_id":', liffId === 'dummy_liff_id');
+    console.log('バイパス条件 (appMode === "local" || liffId === "dummy_liff_id"):', (appMode === 'local' || liffId === 'dummy_liff_id'));
+    
     if (appMode === 'local' || liffId === 'dummy_liff_id') {
+      console.log('=== DEBUG: 認証バイパス条件検出 ===');
       console.log('認証バイパス条件検出:', { appMode, liffId });
       
       const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';
       const alertClass = appMode === 'local' ? 'alert-info' : 'alert-warning';
+      
+      console.log('=== DEBUG: バイパスUI更新開始 ===');
+      console.log('bypassReason:', bypassReason);
+      console.log('alertClass:', alertClass);
       
       document.getElementById('auth-error').innerHTML = `<div class="alert ${alertClass}">${bypassReason}: 認証をバイパスして動作しています</div>`;
       document.getElementById('auth-error').classList.remove('d-none');
@@ -73,12 +95,23 @@ async function initializeLIFF() {
         displayName: `テストユーザー（${bypassReason}）`
       };
       
+      console.log('=== DEBUG: バイパスモードでユーザー情報取得開始 ===');
+      console.log('lineUserId:', lineUserId);
+      console.log('userProfile:', userProfile);
+      
       await fetchUserInfo();
       hideLoading();
+      console.log('=== DEBUG: バイパスモード完了 ===');
       return;
     }
     
+    console.log('=== DEBUG: 第2バイパス条件チェック ===');
+    console.log('!liffId:', !liffId);
+    console.log('liffId === "dummy_liff_id":', liffId === 'dummy_liff_id');
+    console.log('第2バイパス条件 (!liffId || liffId === "dummy_liff_id"):', (!liffId || liffId === 'dummy_liff_id'));
+    
     if (!liffId || liffId === 'dummy_liff_id') {
+      console.log('=== DEBUG: 第2バイパス条件検出 ===');
       console.log('無効なLIFF_ID: 認証をバイパス');
       document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF設定エラー: 認証をバイパスして動作しています</div>';
       document.getElementById('auth-error').classList.remove('d-none');
@@ -90,8 +123,14 @@ async function initializeLIFF() {
       };
       await fetchUserInfo();
       hideLoading();
+      console.log('=== DEBUG: 第2バイパスモード完了 ===');
       return;
     }
+    
+    console.log('=== DEBUG: LIFF初期化開始 ===');
+    console.log('liffId for init:', liffId);
+    console.log('typeof liff:', typeof liff);
+    console.log('liff object:', liff);
     
     await liff.init({ liffId });
     
@@ -146,14 +185,18 @@ async function initializeLIFF() {
     await fetchUserInfo();
     hideLoading();
   } catch (error) {
+    console.error('=== DEBUG: LIFF初期化エラー ===');
     console.error('LIFF初期化エラー:', error);
     console.log('Error details:', {
       message: error.message,
       stack: error.stack,
       liffId: liffId,
-      appMode: appMode
+      appMode: appMode,
+      errorName: error.name,
+      errorCode: error.code
     });
     
+    console.log('=== DEBUG: エラー回復モード開始 ===');
     console.log('LIFF初期化失敗: 認証をバイパスしてプロフィール表示');
     document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">LIFF初期化失敗: 認証をバイパスして動作しています</div>';
     document.getElementById('auth-error').classList.remove('d-none');
@@ -164,14 +207,18 @@ async function initializeLIFF() {
       displayName: 'テストユーザー（エラー回避）'
     };
     
+    console.log('=== DEBUG: エラー回復モードでユーザー情報取得開始 ===');
     try {
       await fetchUserInfo();
+      console.log('=== DEBUG: エラー回復モード - ユーザー情報取得成功 ===');
     } catch (fetchError) {
+      console.error('=== DEBUG: エラー回復モード - ユーザー情報取得もエラー ===');
       console.error('ユーザー情報取得もエラー:', fetchError);
       showError('認証とユーザー情報取得に失敗しました。管理者にお問い合わせください。');
     }
     
     hideLoading();
+    console.log('=== DEBUG: エラー回復モード完了 ===');
   }
 }
 
