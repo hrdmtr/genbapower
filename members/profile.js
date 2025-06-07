@@ -170,14 +170,24 @@ async function initializeLIFF() {
     console.log('ログイン済み: プロフィール情報を表示');
     
     const isInBypassMode = (appMode === 'local' || liffId === 'dummy_liff_id');
+    const isDevelopmentMode = (appMode === 'development');
     
-    if (!liff.isInClient() && !isInBypassMode) {
+    console.log('=== DEBUG: LINE クライアントチェック ===');
+    console.log('liff.isInClient():', liff.isInClient());
+    console.log('isInBypassMode:', isInBypassMode);
+    console.log('isDevelopmentMode:', isDevelopmentMode);
+    console.log('Should skip client check:', (isInBypassMode || isDevelopmentMode));
+    
+    if (!liff.isInClient() && !isInBypassMode && !isDevelopmentMode) {
+      console.log('=== DEBUG: LINEクライアント外アクセス - コンテンツ非表示 ===');
       document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">この機能はLINEアプリ内でのみご利用いただけます。LINEアプリからアクセスしてください。</div>';
       document.getElementById('auth-error').classList.remove('d-none');
       document.getElementById('main-content').classList.add('d-none');
       hideLoading();
       return;
     }
+    
+    console.log('=== DEBUG: LINEクライアントチェック通過 - コンテンツ表示継続 ===');
     
     userProfile = await liff.getProfile();
     lineUserId = userProfile.userId;
