@@ -130,7 +130,10 @@ async function initializeLIFF() {
     
     console.log('ログイン済み: プロフィール情報を表示');
     
-    if (!liff.isInClient()) {
+    const isInBypassMode = (appMode === 'local' || liffId === 'dummy_liff_id');
+    
+    if (!liff.isInClient() && !isInBypassMode) {
+      document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">この機能はLINEアプリ内でのみご利用いただけます。LINEアプリからアクセスしてください。</div>';
       document.getElementById('auth-error').classList.remove('d-none');
       document.getElementById('main-content').classList.add('d-none');
       hideLoading();
