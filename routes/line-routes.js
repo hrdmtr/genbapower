@@ -85,7 +85,7 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
     }
     
     if (!user) {
-      if (process.env.APP_MODE === 'local' || LIFF_ID === 'dummy_liff_id') {
+      if (process.env.APP_MODE === 'local' || process.env.APP_MODE === 'development' || LIFF_ID === 'dummy_liff_id') {
         console.log('認証バイパスモード: テストユーザーを自動作成します');
         const mockUser = {
           line_user_id: userId,
