@@ -234,7 +234,12 @@ async function initializeLIFF() {
 
 async function fetchUserInfo() {
   try {
-    const headers = {
+    console.log('=== DEBUG: fetchUserInfo開始 ===');
+    console.log('lineUserId:', lineUserId);
+    console.log('apiBaseUrl:', apiBaseUrl);
+    console.log('appMode:', appMode);
+    
+    let headers = {
       'Content-Type': 'application/json'
     };
     
@@ -244,6 +249,8 @@ async function fetchUserInfo() {
         if (accessToken) {
           headers['x-line-access-token'] = accessToken;
           console.log('LINE Access Token added to request headers');
+        } else {
+          console.log('LINE Access Token取得失敗: nullまたは空');
         }
       } catch (liffError) {
         console.log('LIFF Access Token取得エラー (バイパスモードで続行):', liffError.message);
@@ -252,60 +259,194 @@ async function fetchUserInfo() {
       console.log('認証バイパスモード: LINE Access Tokenをスキップ');
     }
     
+    console.log('=== DEBUG: リクエスト詳細 ===');
     console.log('Fetching user info with headers:', Object.keys(headers));
-    console.log('Request URL:', `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    const requestUrl = `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`;
+    console.log('Request URL:', requestUrl);
+    console.log('Request method: GET');
+    console.log('Request headers:', JSON.stringify(headers, null, 2));
     
-    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`, {
+    console.log('=== DEBUG: fetch呼び出し開始 ===');
+    const response = await fetch(requestUrl, {
       method: 'GET',
       headers: headers
     });
     
+    console.log('=== DEBUG: レスポンス受信 ===');
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+    console.log('Response statusText:', response.statusText);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
-      throw new Error('ユーザー情報の取得に失敗しました');
+      console.error('=== DEBUG: レスポンスエラー詳細 ===');
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, statusText: ${response.statusText}, body: ${errorText}`);
     }
     
-    const data = await response.json();
+    console.log('=== DEBUG: レスポンステキスト取得 ===');
+    const responseText = await response.text();
+    console.log('Raw response text:', responseText);
+    console.log('Response text length:', responseText.length);
+    console.log('Response text type:', typeof responseText);
     
-    if (data.success) {
+    console.log('=== DEBUG: JSONパース試行 ===');
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('JSON parse successful');
+      console.log('Parsed data type:', typeof data);
+      console.log('Parsed data keys:', Object.keys(data));
+      console.log('Full parsed data:', JSON.stringify(data, null, 2));
+    } catch (parseError) {
+      console.error('=== DEBUG: JSONパースエラー ===');
+      console.error('Parse error:', parseError.message);
+      console.error('Parse error stack:', parseError.stack);
+      throw new Error(`JSON parse failed: ${parseError.message}`);
+    }
+    
+    console.log('=== DEBUG: データ構造チェック ===');
+    console.log('data.success:', data.success);
+    console.log('data.data exists:', !!data.data);
+    if (data.data) {
+      console.log('data.data type:', typeof data.data);
+      console.log('data.data keys:', Object.keys(data.data));
+      console.log('data.data values:', data.data);
+    }
+    
+    if (data.success && data.data) {
+      console.log('=== DEBUG: displayUserInfo呼び出し前 ===');
+      console.log('Calling displayUserInfo with:', data.data);
+      
       displayUserInfo(data.data);
+      
+      console.log('=== DEBUG: displayUserInfo呼び出し後 ===');
+      console.log('=== DEBUG: UI要素確認 ===');
+      
+      const elements = {
+        'display-name': document.getElementById('display-name')?.textContent,
+        'member-id': document.getElementById('member-id')?.textContent,
+        'point-balance': document.getElementById('point-balance')?.textContent,
+        'rank-badge': document.getElementById('rank-badge')?.textContent,
+        'user-status': document.getElementById('user-status')?.textContent,
+        'registration-date': document.getElementById('registration-date')?.textContent,
+        'user-id': document.getElementById('user-id')?.textContent,
+        'user-memo': document.getElementById('user-memo')?.textContent
+      };
+      
+      console.log('UI elements after update:', elements);
+      
+      console.log('=== DEBUG: QRコード生成開始 ===');
       generateQRCode(lineUserId);
+      console.log('=== DEBUG: QRコード生成完了 ===');
     } else {
-      throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
+      console.error('=== DEBUG: データ構造エラー ===');
+      console.error('data.success:', data.success);
+      console.error('data.data:', data.data);
+      console.error('Expected success=true and data object, but got:', data);
+      throw new Error(`Invalid response structure: success=${data.success}, data=${!!data.data}`);
     }
   } catch (error) {
-    console.error('ユーザー情報取得エラー:', error);
-    showError(error.message);
+    console.error('=== DEBUG: fetchUserInfo全体エラー ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      lineUserId,
+      apiBaseUrl,
+      appMode,
+      liffId
+    });
+    showError('ユーザー情報の取得に失敗しました: ' + error.message);
   }
 }
 
 function displayUserInfo(user) {
-  document.getElementById('display-name').textContent = user.display_name;
-  document.getElementById('member-id').textContent = user.user_id;
-  document.getElementById('point-balance').textContent = user.point_balance;
+  console.log('=== DEBUG: displayUserInfo開始 ===');
+  console.log('Received user data:', user);
+  console.log('User data type:', typeof user);
+  console.log('User data keys:', Object.keys(user || {}));
   
-  const rankBadge = document.getElementById('rank-badge');
-  rankBadge.textContent = user.member_rank.toUpperCase();
-  rankBadge.className = 'rank-badge';
-  
-  switch (user.member_rank) {
-    case 'bronze':
-      rankBadge.classList.add('rank-bronze');
-      break;
-    case 'silver':
-      rankBadge.classList.add('rank-silver');
-      break;
-    case 'gold':
-      rankBadge.classList.add('rank-gold');
-      break;
+  try {
+    console.log('=== DEBUG: 各フィールドの更新開始 ===');
+    
+    const displayName = user.display_name || '-';
+    console.log('Setting display-name to:', displayName);
+    document.getElementById('display-name').textContent = displayName;
+    
+    const memberId = user.user_id || '-';
+    console.log('Setting member-id to:', memberId);
+    document.getElementById('member-id').textContent = memberId;
+    
+    const pointBalance = user.point_balance || 0;
+    console.log('Setting point-balance to:', pointBalance);
+    document.getElementById('point-balance').textContent = pointBalance;
+    
+    const memberRank = user.member_rank || 'bronze';
+    console.log('Setting rank-badge to:', memberRank.toUpperCase());
+    const rankBadge = document.getElementById('rank-badge');
+    rankBadge.textContent = memberRank.toUpperCase();
+    rankBadge.className = 'rank-badge';
+    
+    switch (memberRank) {
+      case 'bronze':
+        rankBadge.classList.add('rank-bronze');
+        break;
+      case 'silver':
+        rankBadge.classList.add('rank-silver');
+        break;
+      case 'gold':
+        rankBadge.classList.add('rank-gold');
+        break;
+    }
+    console.log('Rank badge classes:', rankBadge.className);
+    
+    const status = user.status || 'ACTIVE';
+    console.log('Setting user-status to:', status);
+    document.getElementById('user-status').textContent = status;
+    
+    let registrationDate = '-';
+    if (user.registration_date) {
+      try {
+        registrationDate = new Date(user.registration_date).toLocaleDateString('ja-JP');
+        console.log('Parsed registration date:', user.registration_date, '->', registrationDate);
+      } catch (dateError) {
+        console.error('Date parsing error:', dateError);
+        registrationDate = '-';
+      }
+    }
+    console.log('Setting registration-date to:', registrationDate);
+    document.getElementById('registration-date').textContent = registrationDate;
+    
+    const userId = user.user_id || '-';
+    console.log('Setting user-id to:', userId);
+    document.getElementById('user-id').textContent = userId;
+    
+    const memo = user.memo || '-';
+    console.log('Setting user-memo to:', memo);
+    document.getElementById('user-memo').textContent = memo;
+    
+    console.log('=== DEBUG: 全フィールド更新完了 ===');
+    
+    console.log('=== DEBUG: 更新後のDOM要素確認 ===');
+    const updatedElements = {
+      'display-name': document.getElementById('display-name')?.textContent,
+      'member-id': document.getElementById('member-id')?.textContent,
+      'point-balance': document.getElementById('point-balance')?.textContent,
+      'rank-badge': document.getElementById('rank-badge')?.textContent,
+      'user-status': document.getElementById('user-status')?.textContent,
+      'registration-date': document.getElementById('registration-date')?.textContent,
+      'user-id': document.getElementById('user-id')?.textContent,
+      'user-memo': document.getElementById('user-memo')?.textContent
+    };
+    console.log('Final DOM element values:', updatedElements);
+    
+  } catch (error) {
+    console.error('=== DEBUG: displayUserInfo内でエラー ===');
+    console.error('Error:', error);
+    console.error('Error stack:', error.stack);
   }
-  
-  document.getElementById('user-status').textContent = user.status || 'ACTIVE';
-  
-  const registrationDate = user.registration_date ? new Date(user.registration_date).toLocaleDateString('ja-JP') : '-';
-  document.getElementById('registration-date').textContent = registrationDate;
-  
-  document.getElementById('user-id').textContent = user.user_id || '-';
-  document.getElementById('user-memo').textContent = user.memo || '-';
 }
 
 function generateQRCode(userId) {
