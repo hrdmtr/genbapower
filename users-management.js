@@ -191,7 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
         userMemoInput.value = '';
         
         document.getElementById('user-modal-label').textContent = '新規ユーザ追加';
-        chargePointsBtn.style.display = 'none'; // Hide charge button in add mode
+        if (chargePointsBtn) {
+            chargePointsBtn.style.display = 'none'; // Hide charge button in add mode
+        }
         
         userModal.show();
     }
@@ -227,7 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
             userMemoInput.value = user.memo || '';
             
             document.getElementById('user-modal-label').textContent = 'ユーザ編集';
-            chargePointsBtn.style.display = 'block'; // Show charge button in edit mode
+            if (chargePointsBtn) {
+                chargePointsBtn.style.display = 'block'; // Show charge button in edit mode
+            }
             
             userModal.show();
         } catch (error) {
