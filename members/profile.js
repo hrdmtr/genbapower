@@ -265,92 +265,105 @@ async function fetchUserInfo() {
       console.log('認証バイパスモード: LINE Access Tokenをスキップ');
     }
     
-    console.log('=== DEBUG: リクエスト詳細 ===');
-    console.log('Fetching user info with headers:', Object.keys(headers));
-    const requestUrl = `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`;
+    console.log('=== DEBUG: API呼び出し開始 ===');
+    const requestUrl = `${apiBaseUrl}/api/line/user/${lineUserId}?user_id=${lineUserId}`;
     console.log('Request URL:', requestUrl);
     console.log('Request method: GET');
     console.log('Request headers:', JSON.stringify(headers, null, 2));
+    console.log('Current URL:', window.location.href);
+    console.log('User Agent:', navigator.userAgent);
+    console.log('Referrer:', document.referrer);
     
-    console.log('=== DEBUG: fetch呼び出し開始 ===');
+    const startTime = Date.now();
     const response = await fetch(requestUrl, {
       method: 'GET',
-      headers: headers
+      headers: headers,
+      mode: 'cors',
+      credentials: 'include'
     });
+    const endTime = Date.now();
     
-    console.log('=== DEBUG: レスポンス受信 ===');
+    console.log('=== DEBUG: API レスポンス受信 ===');
+    console.log('Response time:', (endTime - startTime) + 'ms');
     console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
     console.log('Response statusText:', response.statusText);
+    console.log('Response ok:', response.ok);
+    console.log('Response type:', response.type);
+    console.log('Response url:', response.url);
     console.log('Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
-      console.error('=== DEBUG: レスポンスエラー詳細 ===');
+      console.error('=== API エラーレスポンス ===');
       const errorText = await response.text();
       console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, statusText: ${response.statusText}, body: ${errorText}`);
+      
+      let parsedError;
+      try {
+        parsedError = JSON.parse(errorText);
+        console.error('Parsed error response:', JSON.stringify(parsedError, null, 2));
+      } catch (parseError) {
+        console.error('Could not parse error response as JSON');
+        parsedError = { message: errorText };
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${parsedError.message || errorText}`);
     }
     
-    console.log('=== DEBUG: レスポンステキスト取得 ===');
     const responseText = await response.text();
-    console.log('Raw response text:', responseText);
-    console.log('Response text length:', responseText.length);
-    console.log('Response text type:', typeof responseText);
+    console.log('=== DEBUG: Raw response text ===');
+    console.log('Response body length:', responseText.length);
+    console.log('Response body preview:', responseText.substring(0, 500));
     
-    console.log('=== DEBUG: JSONパース試行 ===');
     let data;
     try {
       data = JSON.parse(responseText);
-      console.log('JSON parse successful');
-      console.log('Parsed data type:', typeof data);
-      console.log('Parsed data keys:', Object.keys(data));
-      console.log('Full parsed data:', JSON.stringify(data, null, 2));
+      console.log('=== DEBUG: Parsed API レスポンスデータ ===');
+      console.log('Response data:', JSON.stringify(data, null, 2));
     } catch (parseError) {
-      console.error('=== DEBUG: JSONパースエラー ===');
-      console.error('Parse error:', parseError.message);
-      console.error('Parse error stack:', parseError.stack);
-      throw new Error(`JSON parse failed: ${parseError.message}`);
+      console.error('JSON parse error:', parseError.message);
+      console.error('Raw response:', responseText);
+      throw new Error('サーバーから無効なJSONレスポンスを受信しました');
     }
     
-    console.log('=== DEBUG: データ構造チェック ===');
-    console.log('data.success:', data.success);
-    console.log('data.data exists:', !!data.data);
-    if (data.data) {
-      console.log('data.data type:', typeof data.data);
-      console.log('data.data keys:', Object.keys(data.data));
-      console.log('data.data values:', data.data);
+    if (!data.success || !data.data) {
+      console.error('Invalid API response structure:', data);
+      throw new Error(`Invalid response structure: success=${data.success}, data=${!!data.data}`);
     }
+    
+    const userData = data.data;
+    console.log('=== DEBUG: ユーザーデータ処理 ===');
+    console.log('User data:', JSON.stringify(userData, null, 2));
+    
+    console.log('=== DEBUG: DOM要素更新開始 ===');
+    const elements = {
+      'display-name': userData.display_name || '-',
+      'member-id': userData.user_id || '-',
+      'point-balance': userData.point_balance || '0',
+      'member-rank': userData.member_rank || '-',
+      'total-charged': userData.total_charged || '0',
+      'status': userData.status || '-',
+      'registration-date': userData.registration_date ? 
+        new Date(userData.registration_date).toLocaleDateString('ja-JP') : '-',
+      'memo': userData.memo || '-'
+    };
+    
+    for (const [elementId, value] of Object.entries(elements)) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.textContent = value;
+        console.log(`Updated ${elementId}:`, value);
+      } else {
+        console.warn(`Element not found: ${elementId}`);
+      }
+    }
+    
+    console.log('=== DEBUG: プロフィール表示完了 ===');
     
     if (data.success && data.data) {
-      console.log('=== DEBUG: displayUserInfo呼び出し前 ===');
-      console.log('Calling displayUserInfo with:', data.data);
-      
-      displayUserInfo(data.data);
-      
-      console.log('=== DEBUG: displayUserInfo呼び出し後 ===');
-      console.log('=== DEBUG: UI要素確認 ===');
-      
-      const elements = {
-        'display-name': document.getElementById('display-name')?.textContent,
-        'member-id': document.getElementById('member-id')?.textContent,
-        'point-balance': document.getElementById('point-balance')?.textContent,
-        'rank-badge': document.getElementById('rank-badge')?.textContent,
-        'user-status': document.getElementById('user-status')?.textContent,
-        'registration-date': document.getElementById('registration-date')?.textContent,
-        'user-id': document.getElementById('user-id')?.textContent,
-        'user-memo': document.getElementById('user-memo')?.textContent
-      };
-      
-      console.log('UI elements after update:', elements);
-      
-      console.log('=== DEBUG: QRコード生成開始 ===');
-      generateQRCode(lineUserId);
-      console.log('=== DEBUG: QRコード生成完了 ===');
+      console.log('ユーザー情報の表示が完了しました');
+      return data.data;
     } else {
-      console.error('=== DEBUG: データ構造エラー ===');
-      console.error('data.success:', data.success);
-      console.error('data.data:', data.data);
-      console.error('Expected success=true and data object, but got:', data);
+      console.error('Invalid response structure:', data);
       throw new Error(`Invalid response structure: success=${data.success}, data=${!!data.data}`);
     }
   } catch (error) {
@@ -358,12 +371,14 @@ async function fetchUserInfo() {
     console.error('Error type:', error.constructor.name);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-    console.error('Request URL was:', `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    console.error('Request URL was:', `${apiBaseUrl}/api/line/user/${lineUserId}?user_id=${lineUserId}`);
     console.error('Request headers were:', JSON.stringify({
       'Content-Type': 'application/json'
     }, null, 2));
     console.error('appMode:', appMode);
     console.error('lineUserId:', lineUserId);
+    console.error('apiBaseUrl:', apiBaseUrl);
+    console.error('Current timestamp:', new Date().toISOString());
     
     let userFriendlyMessage = 'ユーザー情報の取得に失敗しました';
     
@@ -377,6 +392,8 @@ async function fetchUserInfo() {
       userFriendlyMessage = 'ユーザーが見つかりません';
     } else if (error.message.includes('500')) {
       userFriendlyMessage = 'サーバーエラーが発生しました';
+    } else if (error.message.includes('JSON')) {
+      userFriendlyMessage = 'サーバーレスポンス形式エラー';
     }
     
     showError(userFriendlyMessage + ' (詳細: ' + error.message + ')');
