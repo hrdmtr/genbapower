@@ -187,6 +187,27 @@ async function initializeLIFF() {
     
     userProfile = await liff.getProfile();
     lineUserId = userProfile.userId;
+    console.log('LINE プロフィール取得成功 (profile):', {
+      userId: lineUserId,
+      displayName: userProfile.displayName
+    });
+    
+    try {
+      const debugResponse = await fetch('/api/debug/line-user-id', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          lineUserId: lineUserId,
+          displayName: userProfile.displayName,
+          source: 'profile.js'
+        })
+      });
+      console.log('DEBUG POST送信成功:', await debugResponse.json());
+    } catch (debugError) {
+      console.error('DEBUG POST送信失敗:', debugError);
+    }
     
     await fetchUserInfo();
     hideLoading();

@@ -686,3 +686,17 @@ app.post('/api/server-settings', async (req, res) => {
     });
   }
 });
+
+app.post('/api/debug/line-user-id', (req, res) => {
+  const { lineUserId, displayName, source } = req.body;
+  
+  console.log('=== DEBUG: LINE USER ID RECEIVED ===');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Source:', source);
+  console.log('LINE User ID:', lineUserId);
+  console.log('Display Name:', displayName);
+  console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('=== END DEBUG ===');
+  
+  res.json({ success: true, message: 'Debug data received' });
+});

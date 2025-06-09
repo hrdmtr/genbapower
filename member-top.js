@@ -93,6 +93,24 @@ async function initializeLIFF() {
           displayName: userProfile.displayName,
           pictureUrl: userProfile.pictureUrl
         });
+        
+        try {
+          const debugResponse = await fetch('/api/debug/line-user-id', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              lineUserId: lineUserId,
+              displayName: userProfile.displayName,
+              source: 'member-top.js'
+            })
+          });
+          console.log('DEBUG POST送信成功:', await debugResponse.json());
+        } catch (debugError) {
+          console.error('DEBUG POST送信失敗:', debugError);
+        }
+        
       } catch (profileError) {
         console.error('=== LINE プロフィール取得エラー ===');
         console.error('Error:', profileError);
@@ -121,6 +139,23 @@ async function initializeLIFF() {
         userId: lineUserId,
         displayName: 'テストユーザー（開発モード）'
       };
+      
+      try {
+        const debugResponse = await fetch('/api/debug/line-user-id', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            lineUserId: lineUserId,
+            displayName: userProfile.displayName,
+            source: 'member-top.js (development fallback)'
+          })
+        });
+        console.log('DEBUG POST送信成功 (development fallback):', await debugResponse.json());
+      } catch (debugError) {
+        console.error('DEBUG POST送信失敗 (development fallback):', debugError);
+      }
       
       await fetchUserInfo();
       hideLoading();
