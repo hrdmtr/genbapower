@@ -245,11 +245,21 @@ async function fetchUserInfo() {
         if (accessToken) {
           headers['x-line-access-token'] = accessToken;
           console.log('LINE Access Token added to request headers');
+          console.log('Token length:', accessToken.length);
+          console.log('Token prefix:', accessToken.substring(0, 10) + '...');
         } else {
           console.log('LINE Access Token取得失敗: nullまたは空');
+          if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+            console.log('LINE環境でトークンが無効 - 再ログインを試行');
+            throw new Error('LINE認証トークンが無効です。再ログインが必要です。');
+          }
         }
       } catch (liffError) {
-        console.log('LIFF Access Token取得エラー (バイパスモードで続行):', liffError.message);
+        console.log('LIFF Access Token取得エラー:', liffError.message);
+        if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+          throw new Error('LINE認証に失敗しました: ' + liffError.message);
+        }
+        console.log('開発環境のため認証エラーを無視して続行');
       }
     } else {
       console.log('認証バイパスモード: LINE Access Tokenをスキップ');
@@ -344,17 +354,32 @@ async function fetchUserInfo() {
       throw new Error(`Invalid response structure: success=${data.success}, data=${!!data.data}`);
     }
   } catch (error) {
-    console.error('=== DEBUG: fetchUserInfo全体エラー ===');
-    console.error('Error name:', error.name);
+    console.error('=== DEBUG: fetchUserInfo エラー詳細 ===');
+    console.error('Error type:', error.constructor.name);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      lineUserId,
-      apiBaseUrl,
-      appMode,
-      liffId
-    });
-    showError('ユーザー情報の取得に失敗しました: ' + error.message);
+    console.error('Request URL was:', `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    console.error('Request headers were:', JSON.stringify({
+      'Content-Type': 'application/json'
+    }, null, 2));
+    console.error('appMode:', appMode);
+    console.error('lineUserId:', lineUserId);
+    
+    let userFriendlyMessage = 'ユーザー情報の取得に失敗しました';
+    
+    if (error.message.includes('Failed to fetch')) {
+      userFriendlyMessage = 'ネットワークエラー: サーバーに接続できませんでした';
+    } else if (error.message.includes('401')) {
+      userFriendlyMessage = '認証エラー: LINE認証が無効です';
+    } else if (error.message.includes('403')) {
+      userFriendlyMessage = '権限エラー: アクセス権限がありません';
+    } else if (error.message.includes('404')) {
+      userFriendlyMessage = 'ユーザーが見つかりません';
+    } else if (error.message.includes('500')) {
+      userFriendlyMessage = 'サーバーエラーが発生しました';
+    }
+    
+    showError(userFriendlyMessage + ' (詳細: ' + error.message + ')');
   }
 }
 

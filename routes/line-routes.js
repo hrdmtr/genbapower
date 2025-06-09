@@ -49,9 +49,18 @@ const lineAuthMiddleware = (req, res, next) => {
   
   if (!lineAccessToken) {
     console.log('認証失敗: アクセストークンがありません');
+    console.log('Request headers:', Object.keys(req.headers));
+    console.log('User agent:', req.headers['user-agent']);
+    console.log('Referer:', req.headers['referer']);
     return res.status(401).json({
       success: false,
-      message: 'LINE認証が必要です'
+      message: 'LINE認証が必要です',
+      debug: {
+        hasToken: false,
+        appMode: APP_MODE,
+        liffId: process.env.LIFF_ID,
+        userAgent: req.headers['user-agent']
+      }
     });
   }
   
