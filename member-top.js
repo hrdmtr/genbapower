@@ -222,9 +222,38 @@ async function fetchUserInfo() {
 }
 
 function displayUserInfo(user) {
-  document.getElementById('display-name').textContent = user.display_name || user.user_id;
-  document.getElementById('line-user-id').textContent = lineUserId || '-';
-  document.getElementById('point-balance').textContent = user.points || 0;
+  console.log('=== displayUserInfo 実行開始 ===');
+  console.log('user data:', user);
+  console.log('lineUserId variable:', lineUserId);
+  console.log('userProfile:', userProfile);
+  
+  const displayNameElement = document.getElementById('display-name');
+  const lineUserIdElement = document.getElementById('line-user-id');
+  const pointBalanceElement = document.getElementById('point-balance');
+  
+  console.log('DOM elements found:', {
+    displayName: !!displayNameElement,
+    lineUserId: !!lineUserIdElement,
+    pointBalance: !!pointBalanceElement
+  });
+  
+  if (displayNameElement) {
+    displayNameElement.textContent = user.display_name || user.user_id;
+    console.log('Display name set to:', displayNameElement.textContent);
+  }
+  
+  if (lineUserIdElement) {
+    const userIdToDisplay = lineUserId || (userProfile ? userProfile.userId : '-');
+    lineUserIdElement.textContent = userIdToDisplay;
+    console.log('LINE User ID set to:', lineUserIdElement.textContent);
+  }
+  
+  if (pointBalanceElement) {
+    pointBalanceElement.textContent = user.points || 0;
+    console.log('Point balance set to:', pointBalanceElement.textContent);
+  }
+  
+  console.log('=== displayUserInfo 実行完了 ===');
 }
 
 function showError(message) {
