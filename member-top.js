@@ -111,6 +111,10 @@ async function initializeLIFF() {
           console.error('DEBUG POST送信失敗:', debugError);
         }
         
+        console.log('=== DEBUG POST完了後、fetchUserInfo呼び出し前 ===');
+        console.log('lineUserId:', lineUserId);
+        console.log('userProfile:', userProfile);
+        
       } catch (profileError) {
         console.error('=== LINE プロフィール取得エラー ===');
         console.error('Error:', profileError);
@@ -125,7 +129,39 @@ async function initializeLIFF() {
         return;
       }
       
+      try {
+        await fetch('/api/debug/execution-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'BEFORE_FETCH_USER_INFO',
+            lineUserId: lineUserId,
+            displayName: userProfile ? userProfile.displayName : 'unknown',
+            source: 'member-top.js (LINE environment)',
+            additionalData: { appMode, apiBaseUrl }
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug POST failed (before):', debugError);
+      }
+      
       await fetchUserInfo();
+      
+      try {
+        await fetch('/api/debug/execution-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'AFTER_FETCH_USER_INFO',
+            lineUserId: lineUserId,
+            displayName: userProfile ? userProfile.displayName : 'unknown',
+            source: 'member-top.js (LINE environment)'
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug POST failed (after):', debugError);
+      }
+      
       hideLoading();
     }
   } catch (error) {
@@ -157,7 +193,43 @@ async function initializeLIFF() {
         console.error('DEBUG POST送信失敗 (development fallback):', debugError);
       }
       
+      console.log('=== fetchUserInfo呼び出し直前 (開発モード) ===');
+      console.log('現在のlineUserId:', lineUserId);
+      
+      try {
+        await fetch('/api/debug/execution-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'BEFORE_FETCH_USER_INFO',
+            lineUserId: lineUserId,
+            displayName: userProfile ? userProfile.displayName : 'unknown',
+            source: 'member-top.js (development fallback)',
+            additionalData: { appMode, apiBaseUrl }
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug POST failed (before):', debugError);
+      }
+      
       await fetchUserInfo();
+      
+      try {
+        await fetch('/api/debug/execution-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'AFTER_FETCH_USER_INFO',
+            lineUserId: lineUserId,
+            displayName: userProfile ? userProfile.displayName : 'unknown',
+            source: 'member-top.js (development fallback)'
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug POST failed (after):', debugError);
+      }
+      
+      console.log('=== fetchUserInfo呼び出し完了 (開発モード) ===');
       hideLoading();
       return;
     }
@@ -174,6 +246,22 @@ async function fetchUserInfo() {
     console.log('lineUserId:', lineUserId);
     console.log('appMode:', appMode);
     console.log('apiBaseUrl:', apiBaseUrl);
+    
+    try {
+      await fetch('/api/debug/execution-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'FETCH_USER_INFO_STARTED',
+          lineUserId: lineUserId,
+          displayName: userProfile ? userProfile.displayName : 'unknown',
+          source: 'member-top.js fetchUserInfo()',
+          additionalData: { appMode, apiBaseUrl }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug POST failed (fetchUserInfo started):', debugError);
+    }
     
     if (!lineUserId) {
       throw new Error('LINE ユーザーIDが取得できていません');
@@ -208,7 +296,38 @@ async function fetchUserInfo() {
     console.log('API レスポンスデータ:', data);
     
     if (data.success) {
+      try {
+        await fetch('/api/debug/execution-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'BEFORE_DISPLAY_USER_INFO',
+            lineUserId: lineUserId,
+            displayName: userProfile ? userProfile.displayName : 'unknown',
+            source: 'member-top.js fetchUserInfo()',
+            additionalData: { userData: data.data }
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug POST failed (before displayUserInfo):', debugError);
+      }
+      
       displayUserInfo(data.data);
+      
+      try {
+        await fetch('/api/debug/execution-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'AFTER_DISPLAY_USER_INFO',
+            lineUserId: lineUserId,
+            displayName: userProfile ? userProfile.displayName : 'unknown',
+            source: 'member-top.js fetchUserInfo()'
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug POST failed (after displayUserInfo):', debugError);
+      }
     } else {
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
     }
