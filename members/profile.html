@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プロフィール - QRコードリーダー注文システム</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', Meiryo, メイリオ, sans-serif;
+    }
+    .card {
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+    }
+    .rank-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .rank-bronze {
+      background-color: #cd7f32;
+      color: white;
+    }
+    .rank-silver {
+      background-color: #c0c0c0;
+      color: black;
+    }
+    .rank-gold {
+      background-color: #ffd700;
+      color: black;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="../index.html">
+        <i class="bi bi-qr-code-scan"></i>
+        QRコードリーダー注文システム
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" href="../index.html">ホーム</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="../member-top.html">メンバートップ</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="../line-member-card.html">LINE会員証</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4" id="app">
+    <div class="loading-overlay" id="loading-overlay">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div class="alert alert-danger d-none" id="auth-error">
+      <i class="bi bi-exclamation-triangle-fill"></i> LINEアプリ内でのみ利用可能です。または、ローカルモードで動作しています。
+    </div>
+
+    <div class="row" id="main-content">
+      <div class="col-md-8 mx-auto">
+        <div class="card">
+          <div class="card-header bg-success text-white">
+            <h4><i class="bi bi-person-circle"></i> プロフィール</h4>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h5>基本情報</h5>
+                <p><strong>表示名:</strong> <span id="display-name">-</span></p>
+                <p><strong>会員ID:</strong> <span id="member-id">-</span></p>
+                <p><strong>ポイント残高:</strong> <span id="point-balance">0</span> pt</p>
+                <p><strong>会員ランク:</strong> <span id="rank-badge" class="rank-badge">-</span></p>
+                <p><strong>ステータス:</strong> <span id="user-status">-</span></p>
+                <p><strong>登録年月日:</strong> <span id="registration-date">-</span></p>
+                <p><strong>ユーザーID:</strong> <span id="user-id">-</span></p>
+                <p><strong>メモ:</strong> <span id="user-memo">-</span></p>
+              </div>
+              <div class="col-md-6 text-center">
+                <h5>会員QRコード</h5>
+                <div id="qrcode"></div>
+              </div>
+            </div>
+            
+            <hr>
+            
+            <div class="row">
+              <div class="col-12">
+                <h5>アクション</h5>
+                <a href="../line-member-card.html" class="btn btn-success me-2">
+                  <i class="bi bi-credit-card"></i> 詳細な会員証を見る
+                </a>
+                <a href="../member-top.html" class="btn btn-outline-secondary">
+                  <i class="bi bi-arrow-left"></i> メンバートップに戻る
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>

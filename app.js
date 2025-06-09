@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isConnected = false;
 
     // APIエンドポイント
-    const API_ENDPOINT = 'https://example.com/api/orders';
+    const API_ENDPOINT = '/api/orders';
 
     // ログ追加関数
     function addLog(message, type = 'info') {
@@ -594,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectButton.disabled = true;
         addLog('QRコードリーダーのテストにはテストボタンを使用してください。', 'info');
     }
+<<<<<<< HEAD
 
     // デモ用テスト機能：URLパラメータで商品IDを指定すると表示
     const urlParams = new URLSearchParams(window.location.search);
@@ -732,3 +733,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+||||||| 35fbfa4
+});
+=======
+});
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -869,3 +870,57 @@
     </script>
 </body>
 </html>
+||||||| 35fbfa4
+=======
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注文一覧 - QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>QRコードリーダー注文システム</h1>
+        
+        <div class="nav-bar">
+            <div class="hamburger-menu">
+                <div class="hamburger-icon">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <a href="index.html" class="nav-link">QRコード読み取り</a>
+            <a href="orders.html" class="nav-link active">注文一覧</a>
+            <a href="products-management.html" class="nav-link">商品管理</a>
+            <a href="users-management.html" class="nav-link">ユーザ管理</a>
+            <a href="/version" class="nav-link">バージョン</a>
+        </div>
+        
+        <div class="orders-panel">
+            <h2>注文一覧</h2>
+            <div class="status-message" id="status-message"></div>
+            <div class="orders-table-container">
+                <table id="orders-table" class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>テーブル番号</th>
+                            <th>注文日時</th>
+                            <th>ステータス</th>
+                            <th>商品ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-table-body">
+                        <!-- 注文データがここに表示されます -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="navbar.js"></script>
+    <script src="orders.js"></script>
+</body>
+</html>
+>>>>>>> origin/main
