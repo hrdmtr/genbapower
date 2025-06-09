@@ -96,6 +96,21 @@ async function initializeLIFF() {
     }
   } catch (error) {
     console.error('LIFF初期化エラー:', error);
+    
+    if (appMode === 'development' && (error.message.includes('channel not found') || liffId === 'dummy_liff_id')) {
+      console.log('開発モード: ダミーLIFF IDのため、テストデータを使用します');
+      
+      lineUserId = 'U1234567890abcdef';
+      userProfile = {
+        userId: lineUserId,
+        displayName: 'テストユーザー（開発モード）'
+      };
+      
+      await fetchUserInfo();
+      hideLoading();
+      return;
+    }
+    
     document.getElementById('auth-error').classList.remove('d-none');
     document.getElementById('auth-error').textContent = `エラーが発生しました: ${error.message}`;
     hideLoading();
