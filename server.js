@@ -631,7 +631,7 @@ app.get('/api/server-settings', async (req, res) => {
         recordsPerPage: 20,
         recordsPerPageDescription: '1ページあたりの表示件数'
       }),
-      appMode: process.env.APP_MODE || 'local',
+      appMode: process.env.APP_MODE || 'development',
       liffId: process.env.LIFF_ID || 'dummy_liff_id',
       lineChannelId: process.env.LINE_CHANNEL_ID || '',
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'

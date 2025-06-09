@@ -4,8 +4,8 @@ let userProfile = null;
 let appMode = 'local';
 let apiBaseUrl = '/api/users';
 
-document.addEventListener('DOMContentLoaded', () => {
-  fetchEnvironmentSettings();
+document.addEventListener('DOMContentLoaded', async () => {
+  await fetchEnvironmentSettings();
   initializeLIFF();
 });
 
