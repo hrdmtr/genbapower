@@ -135,6 +135,7 @@ async function fetchUserInfo() {
 
 function displayUserInfo(user) {
   document.getElementById('display-name').textContent = user.display_name || user.user_id;
+  document.getElementById('line-user-id').textContent = lineUserId || '-';
   document.getElementById('point-balance').textContent = user.points || 0;
 }
 
