@@ -84,8 +84,28 @@ async function initializeLIFF() {
         return;
       }
       
-      userProfile = await liff.getProfile();
-      lineUserId = userProfile.userId;
+      try {
+        console.log('=== LINE プロフィール取得開始 ===');
+        userProfile = await liff.getProfile();
+        lineUserId = userProfile.userId;
+        console.log('LINE プロフィール取得成功:', {
+          userId: lineUserId,
+          displayName: userProfile.displayName,
+          pictureUrl: userProfile.pictureUrl
+        });
+      } catch (profileError) {
+        console.error('=== LINE プロフィール取得エラー ===');
+        console.error('Error:', profileError);
+        console.error('LIFF状態:', {
+          isLoggedIn: liff.isLoggedIn(),
+          isInClient: liff.isInClient(),
+          context: liff.getContext()
+        });
+        
+        showError(`LINEプロフィール取得に失敗しました: ${profileError.message}`);
+        hideLoading();
+        return;
+      }
       
       await fetchUserInfo();
       hideLoading();
@@ -115,23 +135,42 @@ async function initializeLIFF() {
 
 async function fetchUserInfo() {
   try {
+    console.log('=== ユーザー情報取得開始 ===');
+    console.log('lineUserId:', lineUserId);
+    console.log('appMode:', appMode);
+    console.log('apiBaseUrl:', apiBaseUrl);
+    
+    if (!lineUserId) {
+      throw new Error('LINE ユーザーIDが取得できていません');
+    }
+    
     const headers = {};
     if (appMode !== 'local') {
       const accessToken = liff.getAccessToken();
+      console.log('LINE Access Token取得:', accessToken ? 'あり' : 'なし');
       if (accessToken) {
         headers['x-line-access-token'] = accessToken;
       }
     }
     
-    const response = await fetch(`${apiBaseUrl}/line-lookup/${lineUserId}`, {
+    const requestUrl = `${apiBaseUrl}/line-lookup/${lineUserId}`;
+    console.log('API リクエスト URL:', requestUrl);
+    console.log('リクエストヘッダー:', headers);
+    
+    const response = await fetch(requestUrl, {
       headers
     });
     
+    console.log('API レスポンス状態:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error('ユーザー情報の取得に失敗しました');
+      const errorText = await response.text();
+      console.error('API エラーレスポンス:', errorText);
+      throw new Error(`ユーザー情報の取得に失敗しました (${response.status}): ${errorText}`);
     }
     
     const data = await response.json();
+    console.log('API レスポンスデータ:', data);
     
     if (data.success) {
       displayUserInfo(data.data);
@@ -139,7 +178,10 @@ async function fetchUserInfo() {
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
     }
   } catch (error) {
-    console.error('ユーザー情報取得エラー:', error);
+    console.error('=== ユーザー情報取得エラー詳細 ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     showError(error.message);
   }
 }
