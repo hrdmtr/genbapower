@@ -2,7 +2,7 @@ let liffId = 'dummy_liff_id';
 let lineUserId = null;
 let userProfile = null;
 let appMode = 'local';
-let apiBaseUrl = '/api/line';
+let apiBaseUrl = 'http://localhost:8000';
 
 document.addEventListener('DOMContentLoaded', async () => {
   await fetchEnvironmentSettings();
@@ -25,7 +25,7 @@ async function fetchEnvironmentSettings() {
         
         if (data.data.baseUrl) {
           const oldApiBaseUrl = apiBaseUrl;
-          apiBaseUrl = `${data.data.baseUrl}/api/line`;
+          apiBaseUrl = data.data.baseUrl;
           console.log('Updated apiBaseUrl:', oldApiBaseUrl, '->', apiBaseUrl);
         }
         

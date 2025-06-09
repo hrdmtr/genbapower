@@ -53,7 +53,12 @@ const lineAuthMiddleware = (req, res, next) => {
     
     req.lineUser = {
       userId: userId || 'U1234567890abcdef',
-      displayName: 'テストユーザー（LIFF設定未完了）'
+      displayName: 'テストユーザー（開発モード）',
+      point_balance: 100,
+      member_rank: 'bronze',
+      status: 'ACTIVE',
+      registration_date: new Date().toISOString(),
+      memo: '開発モード用テストユーザー'
     };
     
     console.log('設定されたユーザー:', req.lineUser);
