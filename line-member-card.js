@@ -84,10 +84,7 @@ async function initializeLIFF() {
       console.log('現在のURL:', window.location.href);
       console.log('Referrer:', document.referrer);
       
-      const cachedAuthState = checkAuthenticationState();
-      console.log('キャッシュされた認証状態:', cachedAuthState);
-      
-      if (!isLoggedIn && !cachedAuthState) {
+      if (!isLoggedIn) {
         console.log('未ログイン: ログインページにリダイレクト');
         
         if (!document.referrer.includes('/login.html') && !document.referrer.includes('liff.line.me')) {
@@ -102,10 +99,7 @@ async function initializeLIFF() {
         return;
       }
       
-      if (isLoggedIn) {
-        console.log('ログイン済み: 認証状態をキャッシュ');
-        setAuthenticationState(true);
-      }
+
       
       if (!liff.isInClient()) {
         document.getElementById('auth-error').classList.remove('d-none');
@@ -551,27 +545,4 @@ function showLoading() {
 
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
-}
-
-function checkAuthenticationState() {
-  const authState = sessionStorage.getItem('liff_auth_state');
-  const currentTime = Date.now();
-  
-  if (authState) {
-    const { timestamp, isAuthenticated } = JSON.parse(authState);
-    if (currentTime - timestamp < 300000 && isAuthenticated) {
-      console.log('キャッシュされた認証状態を使用');
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-function setAuthenticationState(isAuthenticated) {
-  const authState = {
-    timestamp: Date.now(),
-    isAuthenticated: isAuthenticated
-  };
-  sessionStorage.setItem('liff_auth_state', JSON.stringify(authState));
 }
