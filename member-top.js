@@ -435,7 +435,12 @@ async function fetchUserInfo() {
       console.log('ローカルモード: アクセストークンをスキップ');
     }
     console.log('=== ヘッダー設定完了 ===');
-    
+    // IMPORTANT: クロスオリジン問題の解決
+    // 問題: LINE環境（ngrokドメイン）から http://localhost:8000 へのAPI呼び出しが
+    //       "Load failed" エラーで失敗していた（クロスオリジンリクエスト制限）
+    // 解決: 相対パス /api/users/line-lookup/${lineUserId} を使用することで
+    //       同一オリジンでのAPI呼び出しを実現し、クロスオリジン問題を回避
+
     const requestUrl = `/api/users/line-lookup/${lineUserId}`;
     console.log('API リクエスト URL:', requestUrl);
     console.log('リクエストヘッダー:', headers);
