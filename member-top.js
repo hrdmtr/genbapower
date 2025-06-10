@@ -263,18 +263,36 @@ async function fetchUserInfo() {
       console.error('Debug POST failed (fetchUserInfo started):', debugError);
     }
     
+    console.log('=== lineUserId チェック ===');
+    console.log('lineUserId value:', lineUserId);
+    console.log('lineUserId type:', typeof lineUserId);
+    console.log('lineUserId truthy:', !!lineUserId);
+    
     if (!lineUserId) {
+      console.error('=== LINE ユーザーIDが取得できていません ===');
       throw new Error('LINE ユーザーIDが取得できていません');
     }
     
+    console.log('=== ヘッダー設定開始 ===');
     const headers = {};
     if (appMode !== 'local') {
-      const accessToken = liff.getAccessToken();
-      console.log('LINE Access Token取得:', accessToken ? 'あり' : 'なし');
-      if (accessToken) {
-        headers['x-line-access-token'] = accessToken;
+      console.log('非ローカルモード: アクセストークン取得を試行');
+      try {
+        const accessToken = liff.getAccessToken();
+        console.log('LINE Access Token取得:', accessToken ? 'あり' : 'なし');
+        if (accessToken) {
+          headers['x-line-access-token'] = accessToken;
+          console.log('アクセストークンをヘッダーに設定');
+        }
+      } catch (tokenError) {
+        console.error('=== アクセストークン取得エラー ===');
+        console.error('tokenError:', tokenError);
+        console.error('tokenError.message:', tokenError.message);
       }
+    } else {
+      console.log('ローカルモード: アクセストークンをスキップ');
     }
+    console.log('=== ヘッダー設定完了 ===');
     
     const requestUrl = `${apiBaseUrl}/line-lookup/${lineUserId}`;
     console.log('API リクエスト URL:', requestUrl);
