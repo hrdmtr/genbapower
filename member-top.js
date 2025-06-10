@@ -280,9 +280,24 @@ async function fetchUserInfo() {
     console.log('API リクエスト URL:', requestUrl);
     console.log('リクエストヘッダー:', headers);
     
-    const response = await fetch(requestUrl, {
-      headers
-    });
+    console.log('=== fetch() 呼び出し直前 ===');
+    console.log('requestUrl:', requestUrl);
+    console.log('headers:', JSON.stringify(headers, null, 2));
+    
+    let response;
+    try {
+      response = await fetch(requestUrl, {
+        headers
+      });
+      console.log('=== fetch() 呼び出し成功 ===');
+      console.log('response object:', response);
+    } catch (fetchError) {
+      console.error('=== fetch() 呼び出しエラー ===');
+      console.error('fetchError:', fetchError);
+      console.error('fetchError.message:', fetchError.message);
+      console.error('fetchError.stack:', fetchError.stack);
+      throw new Error(`API呼び出しに失敗しました: ${fetchError.message}`);
+    }
     
     console.log('API レスポンス状態:', response.status, response.statusText);
     console.log('API レスポンスヘッダー:', Object.fromEntries(response.headers.entries()));
