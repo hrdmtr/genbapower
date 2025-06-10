@@ -436,7 +436,7 @@ async function fetchUserInfo() {
     }
     console.log('=== ヘッダー設定完了 ===');
     
-    const requestUrl = `${apiBaseUrl}/line-lookup/${lineUserId}`;
+    const requestUrl = `/api/users/line-lookup/${lineUserId}`;
     console.log('API リクエスト URL:', requestUrl);
     console.log('リクエストヘッダー:', headers);
     
