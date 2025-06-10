@@ -41,7 +41,7 @@ const lineAuthMiddleware = (req, res, next) => {
   }
   
   const LIFF_ID = process.env.LIFF_ID || 'dummy_liff_id';
-  console.log('=== LIFF_ID 詳細チェック ===');
+
   console.log('LIFF_ID value:', LIFF_ID);
   console.log('LIFF_ID type:', typeof LIFF_ID);
   console.log('LIFF_ID === "dummy_liff_id":', LIFF_ID === 'dummy_liff_id');
@@ -66,7 +66,7 @@ const lineAuthMiddleware = (req, res, next) => {
   }
   
   const lineAccessToken = req.headers['x-line-access-token'];
-  console.log('=== LINE認証トークンチェック ===');
+
   console.log('x-line-access-token header exists:', !!lineAccessToken);
   console.log('Token length:', lineAccessToken ? lineAccessToken.length : 0);
   console.log('Token prefix:', lineAccessToken ? lineAccessToken.substring(0, 20) + '...' : 'N/A');
@@ -76,7 +76,7 @@ const lineAuthMiddleware = (req, res, next) => {
   console.log('Origin:', req.headers['origin']);
   
   if (!lineAccessToken) {
-    console.log('=== 認証失敗: アクセストークンがありません ===');
+
     console.log('Request headers:', Object.keys(req.headers));
     
     const errorResponse = {
@@ -100,7 +100,7 @@ const lineAuthMiddleware = (req, res, next) => {
     return res.status(401).json(errorResponse);
   }
   
-  console.log('=== LINE認証トークン検証開始 ===');
+
   req.lineUser = {
     userId: userId,
     displayName: 'LINE User'
@@ -111,7 +111,7 @@ const lineAuthMiddleware = (req, res, next) => {
 };
 
 router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
-  console.log('=== /api/line/user/:userId エンドポイント開始 ===');
+
   try {
     const userId = req.params.userId;
     const lineUser = req.lineUser;
@@ -148,12 +148,12 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
     }
     
     let user;
-    console.log('=== データベースからユーザー情報取得試行 ===');
+
     try {
       user = await getLineUserById(userId);
       console.log('データベースからユーザー取得成功:', JSON.stringify(user, null, 2));
     } catch (dbError) {
-      console.log('=== データベースエラー ===');
+
       console.log('DB Error message:', dbError.message);
       console.log('DB Error stack:', dbError.stack);
       console.log('モックユーザーを使用します');
@@ -161,7 +161,7 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
     }
     
     if (!user) {
-      console.log('=== ユーザーが見つからない場合の処理 ===');
+
       const shouldCreateMockUser = process.env.APP_MODE === 'local' || process.env.APP_MODE === 'development' || LIFF_ID === 'dummy_liff_id';
       console.log('モックユーザー作成条件:', {
         appMode: process.env.APP_MODE,
@@ -198,7 +198,7 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
           message: '認証バイパスモード: テストユーザーを使用します'
         };
         
-        console.log('=== モックユーザーレスポンス送信 ===');
+
         console.log('Response data:', JSON.stringify(responseData, null, 2));
         
         return res.status(200).json(responseData);
@@ -220,7 +220,7 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
       return res.status(404).json(notFoundResponse);
     }
     
-    console.log('=== 実際のユーザーデータでレスポンス作成 ===');
+
     const responseData = {
       success: true,
       data: {
@@ -235,7 +235,7 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
       }
     };
     
-    console.log('=== 成功レスポンス送信 ===');
+
     console.log('Response data:', JSON.stringify(responseData, null, 2));
     
     res.status(200).json(responseData);

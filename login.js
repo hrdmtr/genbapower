@@ -34,9 +34,6 @@ async function fetchEnvironmentSettings() {
 
 async function initializeAuthentication() {
   try {
-    console.log('=== 認証初期化 (login.js) ===');
-    console.log('appMode:', appMode);
-    console.log('liffId:', liffId);
     
     if (appMode === 'local' || liffId === 'dummy_liff_id') {
       const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';

@@ -78,10 +78,10 @@ async function initializeLIFF() {
     } else {
       await liff.init({ liffId });
       
-      console.log('=== LINE認証状態チェック (line-member-card.js) ===');
+
       const isLoggedIn = liff.isLoggedIn();
       console.log('liff.isLoggedIn():', isLoggedIn);
-      console.log('現在のURL:', window.location.href);
+
       console.log('Referrer:', document.referrer);
       
       if (!isLoggedIn) {
@@ -131,7 +131,6 @@ async function initializeLIFF() {
         });
         console.log('DEBUG POST送信成功:', await debugResponse.json());
       } catch (debugError) {
-        console.error('DEBUG POST送信失敗:', debugError);
       }
       
       await fetchUserInfo();

@@ -67,7 +67,6 @@ app.get('/version', (req, res) => {
 
 console.log('Registering /members/profile endpoint...');
 app.get('/members/profile', (req, res) => {
-  console.log('=== /members/profile route accessed ===');
   console.log('Serving profile.html without authentication check');
   
   const filePath = path.join(__dirname, 'members', 'profile.html');
@@ -685,36 +684,4 @@ app.post('/api/server-settings', async (req, res) => {
       mockSave: true
     });
   }
-});
-
-app.post('/api/debug/line-user-id', (req, res) => {
-  const { lineUserId, displayName, source } = req.body;
-  
-  console.log('=== DEBUG: LINE USER ID RECEIVED ===');
-  console.log('Timestamp:', new Date().toISOString());
-  console.log('Source:', source);
-  console.log('LINE User ID:', lineUserId);
-  console.log('Display Name:', displayName);
-  console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('=== END DEBUG ===');
-  
-  res.json({ success: true, message: 'Debug data received' });
-});
-
-app.post('/api/debug/execution-flow', (req, res) => {
-  const { event, lineUserId, displayName, source, additionalData } = req.body;
-  
-  console.log('=== DEBUG: EXECUTION FLOW EVENT ===');
-  console.log('Timestamp:', new Date().toISOString());
-  console.log('Event:', event);
-  console.log('Source:', source);
-  console.log('LINE User ID:', lineUserId);
-  console.log('Display Name:', displayName);
-  if (additionalData) {
-    console.log('Additional Data:', JSON.stringify(additionalData, null, 2));
-  }
-  console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('=== END DEBUG ===');
-  
-  res.json({ success: true, message: 'Execution flow debug data received' });
 });
