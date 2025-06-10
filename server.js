@@ -25,7 +25,12 @@ if (APP_MODE === 'local') {
   console.log('ローカルモード: LIFF認証をバイパスします');
 }
 
-app.use(cors());
+app.use(cors({
+  origin: ['https://liff.line.me', 'https://liff-web.line.me', 'http://localhost:8000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-line-access-token']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -62,7 +67,6 @@ app.get('/version', (req, res) => {
 
 console.log('Registering /members/profile endpoint...');
 app.get('/members/profile', (req, res) => {
-  console.log('=== /members/profile route accessed ===');
   console.log('Serving profile.html without authentication check');
   
   const filePath = path.join(__dirname, 'members', 'profile.html');
@@ -631,7 +635,7 @@ app.get('/api/server-settings', async (req, res) => {
         recordsPerPage: 20,
         recordsPerPageDescription: '1ページあたりの表示件数'
       }),
-      appMode: process.env.APP_MODE || 'local',
+      appMode: process.env.APP_MODE || 'development',
       liffId: process.env.LIFF_ID || 'dummy_liff_id',
       lineChannelId: process.env.LINE_CHANNEL_ID || '',
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'

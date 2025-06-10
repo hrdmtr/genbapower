@@ -78,16 +78,13 @@ async function initializeLIFF() {
     } else {
       await liff.init({ liffId });
       
-      console.log('=== LINE認証状態チェック (line-member-card.js) ===');
+
       const isLoggedIn = liff.isLoggedIn();
       console.log('liff.isLoggedIn():', isLoggedIn);
-      console.log('現在のURL:', window.location.href);
+
       console.log('Referrer:', document.referrer);
       
-      const cachedAuthState = checkAuthenticationState();
-      console.log('キャッシュされた認証状態:', cachedAuthState);
-      
-      if (!isLoggedIn && !cachedAuthState) {
+      if (!isLoggedIn) {
         console.log('未ログイン: ログインページにリダイレクト');
         
         if (!document.referrer.includes('/login.html') && !document.referrer.includes('liff.line.me')) {
@@ -103,8 +100,7 @@ async function initializeLIFF() {
       }
       
       if (isLoggedIn) {
-        console.log('ログイン済み: 認証状態をキャッシュ');
-        setAuthenticationState(true);
+        console.log('ログイン済み: 実際のLIFF認証状態を使用');
       }
       
       if (!liff.isInClient()) {
@@ -116,6 +112,26 @@ async function initializeLIFF() {
       
       userProfile = await liff.getProfile();
       lineUserId = userProfile.userId;
+      console.log('LINE プロフィール取得成功 (line-member-card):', {
+        userId: lineUserId,
+        displayName: userProfile.displayName
+      });
+      
+      try {
+        const debugResponse = await fetch('/api/debug/line-user-id', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            lineUserId: lineUserId,
+            displayName: userProfile.displayName,
+            source: 'line-member-card.js'
+          })
+        });
+        console.log('DEBUG POST送信成功:', await debugResponse.json());
+      } catch (debugError) {
+      }
       
       await fetchUserInfo();
       hideLoading();
@@ -551,27 +567,4 @@ function showLoading() {
 
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
-}
-
-function checkAuthenticationState() {
-  const authState = sessionStorage.getItem('liff_auth_state');
-  const currentTime = Date.now();
-  
-  if (authState) {
-    const { timestamp, isAuthenticated } = JSON.parse(authState);
-    if (currentTime - timestamp < 300000 && isAuthenticated) {
-      console.log('キャッシュされた認証状態を使用');
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-function setAuthenticationState(isAuthenticated) {
-  const authState = {
-    timestamp: Date.now(),
-    isAuthenticated: isAuthenticated
-  };
-  sessionStorage.setItem('liff_auth_state', JSON.stringify(authState));
 }
