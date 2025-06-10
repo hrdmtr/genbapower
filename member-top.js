@@ -241,6 +241,27 @@ async function initializeLIFF() {
 }
 
 async function fetchUserInfo() {
+  try {
+    await fetch('/api/debug/execution-flow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'FETCHUSERINFO_FUNCTION_START',
+        lineUserId: lineUserId || 'null',
+        displayName: userProfile ? userProfile.displayName : 'unknown',
+        source: 'member-top.js fetchUserInfo() - ENTRY POINT',
+        additionalData: { 
+          appMode: appMode || 'undefined',
+          apiBaseUrl: apiBaseUrl || 'undefined',
+          userProfileExists: !!userProfile,
+          lineUserIdType: typeof lineUserId
+        }
+      })
+    });
+  } catch (entryDebugError) {
+    console.error('Entry debug POST failed:', entryDebugError);
+  }
+
   console.log('=== fetchUserInfo() 関数開始 ===');
   console.log('関数呼び出し時点での変数状態:');
   console.log('- lineUserId:', lineUserId);
@@ -274,6 +295,27 @@ async function fetchUserInfo() {
     }
     console.log('=== debug POST 処理完了、次のステップへ ===');
     
+    // lineUserIdチェック前にデバッグPOST
+    try {
+      await fetch('/api/debug/execution-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'BEFORE_LINEUSERID_CHECK',
+          lineUserId: lineUserId || 'null',
+          displayName: userProfile ? userProfile.displayName : 'unknown',
+          source: 'member-top.js fetchUserInfo()',
+          additionalData: { 
+            lineUserIdValue: lineUserId,
+            lineUserIdType: typeof lineUserId,
+            lineUserIdTruthy: !!lineUserId
+          }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug POST failed (before lineUserId check):', debugError);
+    }
+
     console.log('=== lineUserId チェック ===');
     console.log('lineUserId value:', lineUserId);
     console.log('lineUserId type:', typeof lineUserId);
@@ -281,9 +323,59 @@ async function fetchUserInfo() {
     
     if (!lineUserId) {
       console.error('=== LINE ユーザーIDが取得できていません ===');
+      
+      try {
+        await fetch('/api/debug/execution-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'LINEUSERID_CHECK_FAILED',
+            lineUserId: lineUserId || 'null',
+            displayName: userProfile ? userProfile.displayName : 'unknown',
+            source: 'member-top.js fetchUserInfo()',
+            additionalData: { error: 'LINE ユーザーIDが取得できていません' }
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug POST failed (lineUserId check failed):', debugError);
+      }
+      
       throw new Error('LINE ユーザーIDが取得できていません');
     }
     
+    // lineUserIdチェック成功後にデバッグPOST
+    try {
+      await fetch('/api/debug/execution-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'LINEUSERID_CHECK_PASSED',
+          lineUserId: lineUserId,
+          displayName: userProfile ? userProfile.displayName : 'unknown',
+          source: 'member-top.js fetchUserInfo()',
+          additionalData: { lineUserIdValue: lineUserId }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug POST failed (lineUserId check passed):', debugError);
+    }
+    
+    try {
+      await fetch('/api/debug/execution-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'BEFORE_HEADER_SETUP',
+          lineUserId: lineUserId,
+          displayName: userProfile ? userProfile.displayName : 'unknown',
+          source: 'member-top.js fetchUserInfo()',
+          additionalData: { appMode: appMode }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug POST failed (before header setup):', debugError);
+    }
+
     console.log('=== ヘッダー設定開始 ===');
     const headers = {};
     if (appMode !== 'local') {
@@ -295,10 +387,49 @@ async function fetchUserInfo() {
           headers['x-line-access-token'] = accessToken;
           console.log('アクセストークンをヘッダーに設定');
         }
+        
+        try {
+          await fetch('/api/debug/execution-flow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'ACCESS_TOKEN_RETRIEVED',
+              lineUserId: lineUserId,
+              displayName: userProfile ? userProfile.displayName : 'unknown',
+              source: 'member-top.js fetchUserInfo()',
+              additionalData: { 
+                hasAccessToken: !!accessToken,
+                headerCount: Object.keys(headers).length
+              }
+            })
+          });
+        } catch (debugError) {
+          console.error('Debug POST failed (access token retrieved):', debugError);
+        }
+        
       } catch (tokenError) {
         console.error('=== アクセストークン取得エラー ===');
         console.error('tokenError:', tokenError);
         console.error('tokenError.message:', tokenError.message);
+        
+        try {
+          await fetch('/api/debug/execution-flow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'ACCESS_TOKEN_ERROR',
+              lineUserId: lineUserId,
+              displayName: userProfile ? userProfile.displayName : 'unknown',
+              source: 'member-top.js fetchUserInfo()',
+              additionalData: { 
+                error: tokenError.message,
+                errorType: tokenError.constructor.name
+              }
+            })
+          });
+        } catch (debugError) {
+          console.error('Debug POST failed (access token error):', debugError);
+        }
       }
     } else {
       console.log('ローカルモード: アクセストークンをスキップ');
@@ -308,6 +439,26 @@ async function fetchUserInfo() {
     const requestUrl = `${apiBaseUrl}/line-lookup/${lineUserId}`;
     console.log('API リクエスト URL:', requestUrl);
     console.log('リクエストヘッダー:', headers);
+    
+    try {
+      await fetch('/api/debug/execution-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'BEFORE_API_FETCH',
+          lineUserId: lineUserId,
+          displayName: userProfile ? userProfile.displayName : 'unknown',
+          source: 'member-top.js fetchUserInfo()',
+          additionalData: { 
+            requestUrl: requestUrl,
+            headers: headers,
+            headersStringified: JSON.stringify(headers)
+          }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug POST failed (before API fetch):', debugError);
+    }
     
     console.log('=== fetch() 呼び出し直前 ===');
     console.log('requestUrl:', requestUrl);
