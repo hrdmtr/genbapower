@@ -285,6 +285,7 @@ async function fetchUserInfo() {
     });
     
     console.log('API レスポンス状態:', response.status, response.statusText);
+    console.log('API レスポンスヘッダー:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -292,8 +293,18 @@ async function fetchUserInfo() {
       throw new Error(`ユーザー情報の取得に失敗しました (${response.status}): ${errorText}`);
     }
     
-    const data = await response.json();
-    console.log('API レスポンスデータ:', data);
+    const responseText = await response.text();
+    console.log('API レスポンス生テキスト:', responseText);
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('API レスポンスデータ:', data);
+    } catch (parseError) {
+      console.error('JSON パースエラー:', parseError);
+      console.error('レスポンステキスト:', responseText);
+      throw new Error(`APIレスポンスのJSONパースに失敗しました: ${parseError.message}`);
+    }
     
     if (data.success) {
       try {
