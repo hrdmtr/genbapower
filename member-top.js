@@ -362,9 +362,17 @@ function displayUserInfo(user) {
   }
   
   if (lineUserIdElement) {
+    console.log('=== LINE User ID Display Debug ===');
+    console.log('Global lineUserId variable:', lineUserId);
+    console.log('userProfile object:', userProfile);
+    console.log('userProfile.userId:', userProfile ? userProfile.userId : 'userProfile is null');
+    
     const userIdToDisplay = lineUserId || (userProfile ? userProfile.userId : '-');
+    console.log('Final userIdToDisplay:', userIdToDisplay);
+    
     lineUserIdElement.textContent = userIdToDisplay;
     console.log('LINE User ID set to:', lineUserIdElement.textContent);
+    console.log('Element after update:', lineUserIdElement.outerHTML);
   }
   
   if (pointBalanceElement) {
