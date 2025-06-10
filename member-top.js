@@ -241,12 +241,21 @@ async function initializeLIFF() {
 }
 
 async function fetchUserInfo() {
+  console.log('=== fetchUserInfo() 関数開始 ===');
+  console.log('関数呼び出し時点での変数状態:');
+  console.log('- lineUserId:', lineUserId);
+  console.log('- appMode:', appMode);
+  console.log('- apiBaseUrl:', apiBaseUrl);
+  console.log('- userProfile:', userProfile);
+  
   try {
+    console.log('=== try ブロック開始 ===');
     console.log('=== ユーザー情報取得開始 ===');
     console.log('lineUserId:', lineUserId);
     console.log('appMode:', appMode);
     console.log('apiBaseUrl:', apiBaseUrl);
     
+    console.log('=== debug POST 送信前 ===');
     try {
       await fetch('/api/debug/execution-flow', {
         method: 'POST',
@@ -259,9 +268,11 @@ async function fetchUserInfo() {
           additionalData: { appMode, apiBaseUrl }
         })
       });
+      console.log('=== debug POST 送信完了 ===');
     } catch (debugError) {
       console.error('Debug POST failed (fetchUserInfo started):', debugError);
     }
+    console.log('=== debug POST 処理完了、次のステップへ ===');
     
     console.log('=== lineUserId チェック ===');
     console.log('lineUserId value:', lineUserId);
@@ -376,12 +387,18 @@ async function fetchUserInfo() {
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
     }
   } catch (error) {
+    console.error('=== fetchUserInfo() catch ブロック実行 ===');
     console.error('=== ユーザー情報取得エラー詳細 ===');
     console.error('Error type:', error.constructor.name);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
+    console.error('エラー発生時の変数状態:');
+    console.error('- lineUserId:', lineUserId);
+    console.error('- appMode:', appMode);
+    console.error('- apiBaseUrl:', apiBaseUrl);
     showError(error.message);
   }
+  console.log('=== fetchUserInfo() 関数終了 ===');
 }
 
 function displayUserInfo(user) {
