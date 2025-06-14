@@ -58,11 +58,11 @@ async function initializeLIFF() {
     console.log('現在のURL:', window.location.href);
     console.log('Referrer:', document.referrer);
     
-    if (appMode === 'local' || liffId === 'dummy_liff_id') {
+    if (appMode === 'local' || appMode === 'development' || liffId === 'dummy_liff_id') {
       console.log('認証バイパス条件検出:', { appMode, liffId });
       
-      const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';
-      const alertClass = appMode === 'local' ? 'alert-info' : 'alert-warning';
+      const bypassReason = appMode === 'local' ? 'ローカルモード' : (appMode === 'development' ? 'デベロップメントモード' : 'LIFF設定未完了');
+      const alertClass = appMode === 'local' ? 'alert-info' : (appMode === 'development' ? 'alert-info' : 'alert-warning');
       
       document.getElementById('auth-error').innerHTML = `<div class="alert ${alertClass}">${bypassReason}: 認証をバイパスして動作しています</div>`;
       document.getElementById('auth-error').classList.remove('d-none');
@@ -172,7 +172,7 @@ async function fetchUserInfo() {
       'Content-Type': 'application/json'
     };
     
-    if (appMode !== 'local' && liffId !== 'dummy_liff_id' && typeof liff !== 'undefined' && liff.getAccessToken) {
+    if (appMode !== 'local' && appMode !== 'development' && liffId !== 'dummy_liff_id' && typeof liff !== 'undefined' && liff.getAccessToken) {
       try {
         const accessToken = liff.getAccessToken();
         if (accessToken) {

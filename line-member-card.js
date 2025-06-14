@@ -63,14 +63,15 @@ async function initializeLIFF() {
   try {
     showLoading();
     
-    if (appMode === 'local') {
-      console.log('ローカルモード: LIFF認証をバイパスします');
+    if (appMode === 'local' || appMode === 'development' || liffId === 'dummy_liff_id') {
+      const bypassReason = appMode === 'local' ? 'ローカルモード' : (appMode === 'development' ? 'デベロップメントモード' : 'LIFF設定未完了');
+      console.log(`${bypassReason}: LIFF認証をバイパスします`);
       document.getElementById('auth-error').classList.remove('d-none');
       
       lineUserId = 'U1234567890abcdef';
       userProfile = {
         userId: lineUserId,
-        displayName: 'テストユーザー'
+        displayName: `テストユーザー（${bypassReason}）`
       };
       
       await fetchUserInfo();
@@ -124,7 +125,17 @@ async function initializeLIFF() {
 
 async function fetchUserInfo() {
   try {
-    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    const headers = {};
+    if (appMode !== 'local' && appMode !== 'development' && liffId !== 'dummy_liff_id') {
+      const accessToken = liff.getAccessToken();
+      if (accessToken) {
+        headers['x-line-access-token'] = accessToken;
+      }
+    }
+    
+    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`, {
+      headers
+    });
     
     if (!response.ok) {
       throw new Error('ユーザー情報の取得に失敗しました');
