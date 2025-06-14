@@ -194,28 +194,16 @@ async function fetchUserInfo() {
       headers: headers
     });
     
-    console.log('📡 APIレスポンス受信:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries())
-    });
-    
     if (!response.ok) {
-      console.error('❌ API Response Error:', response.status, response.statusText);
       throw new Error('ユーザー情報の取得に失敗しました');
     }
     
     const data = await response.json();
-    console.log('📥 受信したAPIレスポンス:', JSON.stringify(data, null, 2));
     
     if (data.success) {
-      console.log('✅ APIレスポンス成功 - ユーザー情報を表示');
-      console.log('✅ 表示するユーザーデータ:', JSON.stringify(data.data, null, 2));
       displayUserInfo(data.data);
       generateQRCode(lineUserId);
     } else {
-      console.error('❌ APIレスポンス失敗:', data.message);
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
     }
   } catch (error) {
