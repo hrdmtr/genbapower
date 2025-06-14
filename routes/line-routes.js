@@ -6,12 +6,14 @@ const { validateChargeTicket, useChargeTicket } = require('../services/charge-ti
 const lineAuthMiddleware = (req, res, next) => {
   const APP_MODE = process.env.APP_MODE || 'development';
   
-  console.log(`=== バックエンド認証チェック ===`);
-  console.log('リクエストパス:', req.path);
-  console.log('APP_MODE:', APP_MODE);
-  console.log('Query params:', req.query);
-  console.log('Body params:', req.body);
-  console.log('Headers:', Object.keys(req.headers));
+  console.log(`🔍 === バックエンド認証チェック開始 ===`);
+  console.log('🔍 リクエストパス:', req.path);
+  console.log('🔍 リクエストメソッド:', req.method);
+  console.log('🔍 APP_MODE:', APP_MODE);
+  console.log('🔍 Query params:', JSON.stringify(req.query, null, 2));
+  console.log('🔍 Body params:', JSON.stringify(req.body, null, 2));
+  console.log('🔍 URL params:', JSON.stringify(req.params, null, 2));
+  console.log('🔍 Headers:', JSON.stringify(req.headers, null, 2));
   
   const body = req.body || {};
   const query = req.query || {};
@@ -66,27 +68,61 @@ const lineAuthMiddleware = (req, res, next) => {
 
 router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
   try {
+    console.log('🚀 === ユーザー情報取得API開始 ===');
     const userId = req.params.userId;
+    console.log('🚀 取得対象ユーザーID:', userId);
+    console.log('🚀 認証済みユーザー情報:', JSON.stringify(req.lineUser, null, 2));
     
     const LIFF_ID = process.env.LIFF_ID || 'dummy_liff_id';
+    console.log('🚀 LIFF_ID:', LIFF_ID);
+    console.log('🚀 APP_MODE:', process.env.APP_MODE);
+    
     if (req.lineUser.userId !== userId && process.env.APP_MODE !== 'local' && LIFF_ID !== 'dummy_liff_id') {
+      console.log('❌ 権限チェック失敗:', {
+        requestedUserId: userId,
+        authenticatedUserId: req.lineUser.userId,
+        appMode: process.env.APP_MODE,
+        liffId: LIFF_ID
+      });
       return res.status(403).json({
         success: false,
         message: '権限がありません'
       });
     }
     
+    console.log('✅ 権限チェック通過');
+    
+    console.log('🔍 データベースからユーザー情報を取得中...');
     let user;
     try {
       user = await getLineUserById(userId);
+      console.log('🔍 データベース検索結果:', user ? '見つかりました' : '見つかりませんでした');
+      if (user) {
+        console.log('🔍 取得したユーザー情報:', JSON.stringify({
+          line_user_id: user.line_user_id,
+          display_name: user.display_name,
+          point_balance: user.point_balance,
+          member_rank: user.member_rank,
+          total_charged: user.total_charged
+        }, null, 2));
+      }
     } catch (dbError) {
-      console.log('データベースエラー: モックユーザーを使用します', dbError.message);
+      console.log('❌ データベースエラー: モックユーザーを使用します', dbError.message);
+      console.log('❌ データベースエラー詳細:', dbError.stack);
       user = null;
     }
     
     if (!user) {
+      console.log('📝 ユーザーが見つからない - バイパス条件をチェック');
+      console.log('📝 バイパス条件:', {
+        appMode: process.env.APP_MODE,
+        liffId: LIFF_ID,
+        isLocal: process.env.APP_MODE === 'local',
+        isDummyLiff: LIFF_ID === 'dummy_liff_id'
+      });
+      
       if (process.env.APP_MODE === 'local' || LIFF_ID === 'dummy_liff_id') {
-        console.log('認証バイパスモード: テストユーザーを自動作成します');
+        console.log('✅ 認証バイパスモード: テストユーザーを自動作成します');
         const mockUser = {
           line_user_id: userId,
           display_name: req.lineUser.displayName || 'テストユーザー',
@@ -97,7 +133,9 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
           updated_at: new Date()
         };
         
-        return res.status(200).json({
+        console.log('✅ 作成するモックユーザー:', JSON.stringify(mockUser, null, 2));
+        
+        const responseData = {
           success: true,
           data: {
             user_id: mockUser.line_user_id,
@@ -107,7 +145,10 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
             total_charged: mockUser.total_charged
           },
           message: '認証バイパスモード: テストユーザーを使用します'
-        });
+        };
+        
+        console.log('✅ APIレスポンス送信:', JSON.stringify(responseData, null, 2));
+        return res.status(200).json(responseData);
       }
       
       return res.status(404).json({
@@ -116,7 +157,8 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
       });
     }
     
-    res.status(200).json({
+    console.log('✅ 既存ユーザー情報でレスポンス作成');
+    const responseData = {
       success: true,
       data: {
         user_id: user.line_user_id,
@@ -125,13 +167,22 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
         member_rank: user.member_rank,
         total_charged: user.total_charged
       }
-    });
+    };
+    
+    console.log('✅ APIレスポンス送信:', JSON.stringify(responseData, null, 2));
+    res.status(200).json(responseData);
   } catch (error) {
-    console.error('LINE会員情報取得エラー:', error);
-    res.status(500).json({
+    console.error('❌ LINE会員情報取得エラー:', error);
+    console.error('❌ エラースタック:', error.stack);
+    
+    const errorResponse = {
       success: false,
-      message: 'サーバーエラーが発生しました'
-    });
+      message: 'サーバーエラーが発生しました',
+      debug: error.message
+    };
+    
+    console.log('❌ エラーレスポンス送信:', JSON.stringify(errorResponse, null, 2));
+    res.status(500).json(errorResponse);
   }
 });
 
