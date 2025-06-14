@@ -631,7 +631,7 @@ app.get('/api/server-settings', async (req, res) => {
         recordsPerPage: 20,
         recordsPerPageDescription: '1ページあたりの表示件数'
       }),
-      appMode: process.env.APP_MODE || 'local',
+      appMode: process.env.APP_MODE || 'development',
       liffId: process.env.LIFF_ID || 'dummy_liff_id',
       lineChannelId: process.env.LINE_CHANNEL_ID || '',
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
@@ -644,20 +644,22 @@ app.get('/api/server-settings', async (req, res) => {
   } catch (error) {
     console.error('サーバー設定取得エラー:', error);
     
+    const data = {
+      appName: 'QRコードリーダー注文システム',
+      appNameDescription: 'アプリケーションの名前',
+      baseUrl: 'http://localhost:8000',
+      baseUrlDescription: 'APIリクエストのベースURL',
+      recordsPerPage: 20,
+      recordsPerPageDescription: '1ページあたりの表示件数',
+      appMode: process.env.APP_MODE || 'development',
+      liffId: process.env.LIFF_ID || 'dummy_liff_id',
+      lineChannelId: process.env.LINE_CHANNEL_ID || '',
+      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
+    };
+    
     res.status(200).json({
       success: true,
-      data: {
-        appName: 'QRコードリーダー注文システム',
-        appNameDescription: 'アプリケーションの名前',
-        baseUrl: 'http://localhost:8000',
-        baseUrlDescription: 'APIリクエストのベースURL',
-        recordsPerPage: 20,
-        recordsPerPageDescription: '1ページあたりの表示件数',
-        appMode: process.env.APP_MODE || 'development',
-        liffId: process.env.LIFF_ID || 'dummy_liff_id',
-        lineChannelId: process.env.LINE_CHANNEL_ID || '',
-        apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
-      },
+      data: data,
       message: 'デフォルト設定を使用しています (MongoDB接続エラー)'
     });
   }
