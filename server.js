@@ -683,3 +683,22 @@ app.post('/api/server-settings', async (req, res) => {
     });
   }
 });
+
+app.post('/api/frontend-logs', (req, res) => {
+  try {
+    const { level, message, context, timestamp } = req.body;
+    const logPrefix = level === 'error' ? '❌ [FRONTEND]' : 
+                     level === 'warn' ? '⚠️ [FRONTEND]' : 
+                     '📱 [FRONTEND]';
+    
+    console.log(`${logPrefix} ${timestamp}: ${message}`);
+    if (context) {
+      console.log(`${logPrefix} Context:`, JSON.stringify(context, null, 2));
+    }
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Frontend logging endpoint error:', error);
+    res.status(500).json({ success: false, message: 'Logging failed' });
+  }
+});

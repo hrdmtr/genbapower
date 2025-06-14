@@ -4,6 +4,26 @@ let userProfile = null;
 let appMode = 'local';
 let apiBaseUrl = '/api/line';
 
+async function sendLogToServer(level, message, context = null) {
+  try {
+    await fetch('/api/frontend-logs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        level: level,
+        message: message,
+        context: context,
+        timestamp: new Date().toISOString(),
+        page: 'profile'
+      })
+    });
+  } catch (error) {
+    console.error('Failed to send log to server:', error);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await fetchEnvironmentSettings();
   initializeLIFF();
@@ -12,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function fetchEnvironmentSettings() {
   try {
     console.log('=== Fetching Environment Settings ===');
+    await sendLogToServer('info', '🔧 環境設定取得開始', { url: '/api/server-settings' });
     const response = await fetch('/api/server-settings');
     console.log('Server settings response status:', response.status);
     
@@ -28,11 +49,13 @@ async function fetchEnvironmentSettings() {
         if (data.data.appMode) {
           appMode = data.data.appMode;
           console.log('Updated appMode:', appMode);
+          await sendLogToServer('info', '🔧 appMode更新完了', { appMode: appMode });
         }
         
         if (data.data.liffId) {
           liffId = data.data.liffId;
           console.log('Updated liffId:', liffId);
+          await sendLogToServer('info', '🔧 liffId更新完了', { liffId: liffId });
         }
       }
     } else {
@@ -73,6 +96,13 @@ async function initializeLIFF() {
         displayName: `テストユーザー（${bypassReason}）`
       };
       
+      await sendLogToServer('info', '🆔 lineUserId設定完了', { 
+        lineUserId: lineUserId, 
+        bypassReason: bypassReason,
+        appMode: appMode,
+        liffId: liffId 
+      });
+      
       await fetchUserInfo();
       hideLoading();
       return;
@@ -88,6 +118,12 @@ async function initializeLIFF() {
         userId: lineUserId,
         displayName: 'テストユーザー（LIFF設定エラー）'
       };
+      
+      await sendLogToServer('info', '🆔 lineUserId設定完了（LIFF設定エラー）', { 
+        lineUserId: lineUserId, 
+        appMode: appMode,
+        liffId: liffId 
+      });
       await fetchUserInfo();
       hideLoading();
       return;
@@ -155,6 +191,12 @@ async function initializeLIFF() {
       displayName: 'テストユーザー（エラー回避）'
     };
     
+    await sendLogToServer('info', '🆔 lineUserId設定完了（エラー回避）', { 
+      lineUserId: lineUserId, 
+      appMode: appMode,
+      liffId: liffId 
+    });
+    
     try {
       await fetchUserInfo();
     } catch (fetchError) {
@@ -168,6 +210,18 @@ async function initializeLIFF() {
 
 async function fetchUserInfo() {
   try {
+    console.log('🚀 === fetchUserInfo開始 ===');
+    console.log('🔍 現在のlineUserId:', lineUserId);
+    console.log('🔍 現在のuserProfile:', userProfile);
+    console.log('🔍 現在のappMode:', appMode);
+    console.log('🔍 現在のliffId:', liffId);
+    console.log('🔍 現在のapiBaseUrl:', apiBaseUrl);
+    
+    if (!lineUserId) {
+      console.error('❌ lineUserIdが設定されていません');
+      throw new Error('ユーザーIDが設定されていません');
+    }
+    
     const headers = {
       'Content-Type': 'application/json'
     };
@@ -177,60 +231,190 @@ async function fetchUserInfo() {
         const accessToken = liff.getAccessToken();
         if (accessToken) {
           headers['x-line-access-token'] = accessToken;
-          console.log('LINE Access Token added to request headers');
+          console.log('🔑 LINE Access Token added to request headers');
+        } else {
+          console.log('⚠️ LINE Access Token is empty');
         }
       } catch (liffError) {
-        console.log('LIFF Access Token取得エラー (バイパスモードで続行):', liffError.message);
+        console.log('❌ LIFF Access Token取得エラー (バイパスモードで続行):', liffError.message);
       }
     } else {
-      console.log('認証バイパスモード: LINE Access Tokenをスキップ');
+      console.log('🔓 認証バイパスモード: LINE Access Tokenをスキップ');
     }
     
-    console.log('Fetching user info with headers:', Object.keys(headers));
-    console.log('Request URL:', `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    const requestUrl = `${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`;
+    console.log('📡 API Request Details:');
+    console.log('  URL:', requestUrl);
+    console.log('  Method: GET');
+    console.log('  Headers:', JSON.stringify(headers, null, 2));
     
-    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`, {
+    await sendLogToServer('info', '📡 API Request準備完了', {
+      url: requestUrl,
+      headers: headers,
+      lineUserId: lineUserId
+    });
+    
+    console.log('📤 APIリクエスト送信中...');
+    const response = await fetch(requestUrl, {
       method: 'GET',
       headers: headers
     });
     
+    console.log('📥 APIレスポンス受信:');
+    console.log('  Status:', response.status);
+    console.log('  StatusText:', response.statusText);
+    console.log('  OK:', response.ok);
+    console.log('  Headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
-      throw new Error('ユーザー情報の取得に失敗しました');
+      console.error('❌ API Response Error:', response.status, response.statusText);
+      throw new Error(`ユーザー情報の取得に失敗しました (${response.status}: ${response.statusText})`);
     }
     
+    console.log('📋 レスポンスボディ解析中...');
     const data = await response.json();
+    console.log('📋 受信したAPIレスポンス:', JSON.stringify(data, null, 2));
+    
+    await sendLogToServer('info', '📋 APIレスポンス受信', {
+      success: data.success,
+      hasData: !!data.data,
+      dataKeys: data.data ? Object.keys(data.data) : []
+    });
     
     if (data.success) {
+      console.log('✅ APIレスポンス成功 - ユーザー情報を表示');
+      console.log('👤 表示するユーザーデータ:', JSON.stringify(data.data, null, 2));
+      
+      if (!data.data) {
+        console.error('❌ data.dataが空です');
+        throw new Error('ユーザーデータが空です');
+      }
+      
+      console.log('🎨 displayUserInfo関数を呼び出し中...');
       displayUserInfo(data.data);
+      
+      console.log('🔲 QRコード生成開始...');
       generateQRCode(lineUserId);
+      
+      console.log('✅ === fetchUserInfo完了 ===');
     } else {
+      console.error('❌ APIレスポンス失敗:', data.message);
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
     }
   } catch (error) {
-    console.error('ユーザー情報取得エラー:', error);
+    console.error('💥 ユーザー情報取得エラー:', error);
+    console.error('💥 エラー詳細:', {
+      message: error.message,
+      stack: error.stack,
+      lineUserId: lineUserId,
+      appMode: appMode,
+      apiBaseUrl: apiBaseUrl
+    });
+    
+    await sendLogToServer('error', '💥 fetchUserInfo エラー', {
+      errorMessage: error.message,
+      errorStack: error.stack,
+      lineUserId: lineUserId,
+      appMode: appMode,
+      apiBaseUrl: apiBaseUrl
+    });
+    
     showError(error.message);
   }
 }
 
 function displayUserInfo(user) {
-  document.getElementById('display-name').textContent = user.display_name;
-  document.getElementById('member-id').textContent = user.user_id;
-  document.getElementById('point-balance').textContent = user.point_balance;
+  console.log('🎨 === displayUserInfo開始 ===');
+  console.log('👤 受信したユーザーデータ:', JSON.stringify(user, null, 2));
   
-  const rankBadge = document.getElementById('rank-badge');
-  rankBadge.textContent = user.member_rank.toUpperCase();
-  rankBadge.className = 'rank-badge';
+  sendLogToServer('info', '🎨 ユーザー情報表示開始', {
+    userDataKeys: Object.keys(user),
+    display_name: user.display_name,
+    user_id: user.user_id,
+    point_balance: user.point_balance,
+    member_rank: user.member_rank
+  });
   
-  switch (user.member_rank) {
-    case 'bronze':
-      rankBadge.classList.add('rank-bronze');
-      break;
-    case 'silver':
-      rankBadge.classList.add('rank-silver');
-      break;
-    case 'gold':
-      rankBadge.classList.add('rank-gold');
-      break;
+  try {
+    const displayNameElement = document.getElementById('display-name');
+    if (displayNameElement) {
+      console.log('📝 表示名設定:', user.display_name);
+      displayNameElement.textContent = user.display_name || '-';
+    } else {
+      console.error('❌ display-name要素が見つかりません');
+    }
+    
+    const memberIdElement = document.getElementById('member-id');
+    if (memberIdElement) {
+      console.log('🆔 会員ID設定:', user.user_id);
+      memberIdElement.textContent = user.user_id || '-';
+    } else {
+      console.error('❌ member-id要素が見つかりません');
+    }
+    
+    const pointBalanceElement = document.getElementById('point-balance');
+    if (pointBalanceElement) {
+      console.log('💰 ポイント残高設定:', user.point_balance);
+      pointBalanceElement.textContent = user.point_balance || '0';
+    } else {
+      console.error('❌ point-balance要素が見つかりません');
+    }
+    
+    const rankBadge = document.getElementById('rank-badge');
+    if (rankBadge) {
+      console.log('🏆 ランク設定:', user.member_rank);
+      rankBadge.textContent = (user.member_rank || 'bronze').toUpperCase();
+      rankBadge.className = 'rank-badge';
+      
+      switch (user.member_rank) {
+        case 'bronze':
+          rankBadge.classList.add('rank-bronze');
+          console.log('🥉 ブロンズランク適用');
+          break;
+        case 'silver':
+          rankBadge.classList.add('rank-silver');
+          console.log('🥈 シルバーランク適用');
+          break;
+        case 'gold':
+          rankBadge.classList.add('rank-gold');
+          console.log('🥇 ゴールドランク適用');
+          break;
+        default:
+          rankBadge.classList.add('rank-bronze');
+          console.log('🥉 デフォルトブロンズランク適用');
+      }
+    } else {
+      console.error('❌ rank-badge要素が見つかりません');
+    }
+    
+    console.log('✅ === displayUserInfo完了 ===');
+    
+    console.log('🔍 DOM要素最終状態:');
+    console.log('  表示名:', displayNameElement?.textContent);
+    console.log('  会員ID:', memberIdElement?.textContent);
+    console.log('  ポイント残高:', pointBalanceElement?.textContent);
+    console.log('  ランクバッジ:', rankBadge?.textContent);
+    
+    sendLogToServer('info', '✅ DOM更新完了', {
+      displayName: displayNameElement?.textContent,
+      memberId: memberIdElement?.textContent,
+      pointBalance: pointBalanceElement?.textContent,
+      rankBadge: rankBadge?.textContent
+    });
+    
+  } catch (error) {
+    console.error('💥 displayUserInfo エラー:', error);
+    console.error('💥 エラー詳細:', {
+      message: error.message,
+      stack: error.stack,
+      userData: user
+    });
+    
+    sendLogToServer('error', '💥 displayUserInfo エラー', {
+      errorMessage: error.message,
+      errorStack: error.stack,
+      userData: user
+    });
   }
 }
 
