@@ -28,6 +28,18 @@ const lineAuthMiddleware = (req, res, next) => {
     return next();
   }
   
+  if (APP_MODE === 'development') {
+    console.log('デベロップメントモード: LINE認証をバイパスします');
+    
+    req.lineUser = {
+      userId: userId || 'U1234567890abcdef',
+      displayName: 'テストユーザー（デベロップメントモード）'
+    };
+    
+    console.log('設定されたユーザー:', req.lineUser);
+    return next();
+  }
+  
   const LIFF_ID = process.env.LIFF_ID || 'dummy_liff_id';
   if (LIFF_ID === 'dummy_liff_id') {
     console.log('DUMMY LIFF_ID検出: バックエンド認証をバイパスします');
@@ -82,7 +94,7 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
     }
     
     if (!user) {
-      if (process.env.APP_MODE === 'local' || LIFF_ID === 'dummy_liff_id') {
+      if (process.env.APP_MODE === 'local' || process.env.APP_MODE === 'development' || LIFF_ID === 'dummy_liff_id') {
         console.log('認証バイパスモード: テストユーザーを自動作成します');
         const mockUser = {
           line_user_id: userId,
