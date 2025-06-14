@@ -637,12 +637,6 @@ app.get('/api/server-settings', async (req, res) => {
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
     };
     
-    console.log('🔧 サーバー設定レスポンス:', {
-      appMode: responseData.appMode,
-      liffId: responseData.liffId,
-      mongodbConnected: true
-    });
-    
     res.status(200).json({
       success: true,
       data: responseData
@@ -662,12 +656,6 @@ app.get('/api/server-settings', async (req, res) => {
       lineChannelId: process.env.LINE_CHANNEL_ID || '',
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
     };
-    
-    console.log('🔧 サーバー設定レスポンス (MongoDB接続エラー):', {
-      appMode: data.appMode,
-      liffId: data.liffId,
-      mongodbConnected: false
-    });
     
     res.status(200).json({
       success: true,
