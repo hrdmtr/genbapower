@@ -28,6 +28,10 @@ const lineAuthMiddleware = (req, res, next) => {
     return next();
   }
   
+  // 
+  //
+  //
+  //
   if (APP_MODE === 'development') {
     console.log('デベロップメントモード: LINE認証をバイパスします');
     
