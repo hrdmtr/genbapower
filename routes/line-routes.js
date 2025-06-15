@@ -189,8 +189,8 @@ router.get('/user/:userId', (req, res, next) => {
         'LIFF_ID === dummy_liff_id': LIFF_ID === 'dummy_liff_id'
       });
       
-      if (process.env.APP_MODE === 'local' || process.env.APP_MODE === 'development' || LIFF_ID === 'dummy_liff_id') {
-        console.log('✅ 認証バイパスモード: テストユーザーを自動作成します');
+      if (process.env.APP_MODE === 'local' || LIFF_ID === 'dummy_liff_id') {
+        console.log('[trace for devin] 認証バイパスモード: テストユーザーを自動作成します');
         const mockUser = {
           line_user_id: userId,
           display_name: req.lineUser.displayName || 'テストユーザー',
@@ -201,7 +201,7 @@ router.get('/user/:userId', (req, res, next) => {
           updated_at: new Date()
         };
         
-        console.log('✅ モックユーザーデータを返却:', {
+        console.log('[trace for devin] モックユーザーデータを返却:', {
           user_id: mockUser.line_user_id,
           display_name: mockUser.display_name,
           point_balance: mockUser.point_balance,
@@ -218,6 +218,38 @@ router.get('/user/:userId', (req, res, next) => {
             total_charged: mockUser.total_charged
           },
           message: '認証バイパスモード: テストユーザーを使用します'
+        });
+      }
+      
+      if (process.env.APP_MODE === 'development') {
+        console.log('[trace for devin] デベロップメントモード（実際のLIFF_ID）: 実際のユーザーIDでモックデータ作成');
+        const realUserMockData = {
+          line_user_id: userId,
+          display_name: req.lineUser.displayName || 'haradm',
+          point_balance: 1500,
+          member_rank: 'gold',
+          total_charged: 2500,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+        
+        console.log('[trace for devin] 実際のユーザーIDベースモックデータを返却:', {
+          user_id: realUserMockData.line_user_id,
+          display_name: realUserMockData.display_name,
+          point_balance: realUserMockData.point_balance,
+          member_rank: realUserMockData.member_rank
+        });
+        
+        return res.status(200).json({
+          success: true,
+          data: {
+            user_id: realUserMockData.line_user_id,
+            display_name: realUserMockData.display_name,
+            point_balance: realUserMockData.point_balance,
+            member_rank: realUserMockData.member_rank,
+            total_charged: realUserMockData.total_charged
+          },
+          message: 'デベロップメントモード: 実際のユーザー情報ベースのデータを返却しました'
         });
       }
       
