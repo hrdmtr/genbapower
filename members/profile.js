@@ -6,7 +6,7 @@ let apiBaseUrl = '/api/line';
 
 async function sendLogToServer(level, message, context = null) {
   try {
-    await fetch('/api/frontend-logs', {
+    const response = await fetch('/api/frontend-logs', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -19,8 +19,16 @@ async function sendLogToServer(level, message, context = null) {
         page: 'profile'
       })
     });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    return result;
   } catch (error) {
     console.error('Failed to send log to server:', error);
+    throw error;
   }
 }
 
@@ -133,6 +141,139 @@ async function initializeLIFF() {
           appMode: appMode,
           liffId: liffId 
         });
+        
+        console.log('🧪 LIFF SDK API動作確認開始（デベロップメントモード）');
+        console.log('🔍 sendLogToServer関数テスト開始...');
+        try {
+          const testResult = await sendLogToServer('info', '🧪 LIFF SDK API動作確認開始（デベロップメントモード）', { 
+            appMode: appMode,
+            liffId: liffId,
+            isLoggedIn: liff.isLoggedIn(),
+            timestamp: new Date().toISOString(),
+            testContext: 'LIFF_SDK_API_TESTING'
+          });
+          console.log('✅ LIFF SDK API動作確認開始ログ送信成功:', testResult);
+        } catch (logError) {
+          console.error('❌ LIFF SDK API動作確認開始ログ送信エラー:', logError);
+          console.error('❌ エラー詳細:', {
+            name: logError.name,
+            message: logError.message,
+            stack: logError.stack
+          });
+        }
+        
+        console.log('🔍 liff.getProfile() テスト開始');
+        try {
+          const profile = await liff.getProfile();
+          console.log('✅ liff.getProfile() 成功:', profile);
+          await sendLogToServer('info', '✅ liff.getProfile() 成功', { 
+            userId: profile.userId,
+            displayName: profile.displayName,
+            pictureUrl: profile.pictureUrl || 'なし',
+            statusMessage: profile.statusMessage || 'なし',
+            isLoggedIn: liff.isLoggedIn()
+          });
+        } catch (profileError) {
+          console.log('⚠️ liff.getProfile() エラー:', profileError);
+          try {
+            await sendLogToServer('warn', '⚠️ liff.getProfile() エラー', { 
+              error: profileError.message,
+              isLoggedIn: liff.isLoggedIn()
+            });
+            console.log('✅ liff.getProfile()エラーログ送信成功');
+          } catch (logError) {
+            console.error('❌ liff.getProfile()エラーログ送信失敗:', logError);
+          }
+        }
+        
+        console.log('🔍 liff.getAccessToken() テスト開始');
+        try {
+          const accessToken = liff.getAccessToken();
+          console.log('✅ liff.getAccessToken() 成功:', { hasToken: !!accessToken, tokenLength: accessToken ? accessToken.length : 0 });
+          try {
+            await sendLogToServer('info', '✅ liff.getAccessToken() 成功', { 
+              hasToken: !!accessToken,
+              tokenLength: accessToken ? accessToken.length : 0,
+              tokenPrefix: accessToken ? accessToken.substring(0, 20) + '...' : 'なし',
+              isLoggedIn: liff.isLoggedIn()
+            });
+            console.log('✅ liff.getAccessToken()成功ログ送信成功');
+          } catch (logError) {
+            console.error('❌ liff.getAccessToken()成功ログ送信失敗:', logError);
+          }
+        } catch (tokenError) {
+          console.log('⚠️ liff.getAccessToken() エラー:', tokenError);
+          await sendLogToServer('warn', '⚠️ liff.getAccessToken() エラー', { 
+            error: tokenError.message,
+            isLoggedIn: liff.isLoggedIn()
+          });
+        }
+        
+        console.log('🔍 liff.getIDToken() テスト開始');
+        try {
+          const idToken = liff.getIDToken();
+          console.log('✅ liff.getIDToken() 成功:', { hasIDToken: !!idToken, idTokenLength: idToken ? idToken.length : 0 });
+          await sendLogToServer('info', '✅ liff.getIDToken() 成功', { 
+            hasIDToken: !!idToken,
+            idTokenLength: idToken ? idToken.length : 0,
+            idTokenPrefix: idToken ? idToken.substring(0, 20) + '...' : 'なし',
+            isLoggedIn: liff.isLoggedIn()
+          });
+        } catch (idTokenError) {
+          console.log('⚠️ liff.getIDToken() エラー:', idTokenError);
+          await sendLogToServer('warn', '⚠️ liff.getIDToken() エラー', { 
+            error: idTokenError.message,
+            isLoggedIn: liff.isLoggedIn()
+          });
+        }
+        
+        console.log('🔍 liff.getContext() テスト開始');
+        try {
+          const context = liff.getContext();
+          console.log('✅ liff.getContext() 成功:', context);
+          await sendLogToServer('info', '✅ liff.getContext() 成功', { 
+            type: context.type,
+            viewType: context.viewType,
+            utouId: context.utouId || 'なし',
+            roomId: context.roomId || 'なし',
+            groupId: context.groupId || 'なし',
+            isLoggedIn: liff.isLoggedIn()
+          });
+        } catch (contextError) {
+          console.log('⚠️ liff.getContext() エラー:', contextError);
+          await sendLogToServer('warn', '⚠️ liff.getContext() エラー', { 
+            error: contextError.message,
+            isLoggedIn: liff.isLoggedIn()
+          });
+        }
+        
+        console.log('🔍 liff.getFriendship() テスト開始');
+        try {
+          const friendship = await liff.getFriendship();
+          console.log('✅ liff.getFriendship() 成功:', friendship);
+          await sendLogToServer('info', '✅ liff.getFriendship() 成功', { 
+            friendFlag: friendship.friendFlag,
+            isLoggedIn: liff.isLoggedIn()
+          });
+        } catch (friendshipError) {
+          console.log('⚠️ liff.getFriendship() エラー:', friendshipError);
+          await sendLogToServer('warn', '⚠️ liff.getFriendship() エラー', { 
+            error: friendshipError.message,
+            isLoggedIn: liff.isLoggedIn()
+          });
+        }
+        
+        console.log('🧪 LIFF SDK API動作確認完了（デベロップメントモード）');
+        try {
+          await sendLogToServer('info', '🧪 LIFF SDK API動作確認完了（デベロップメントモード）', { 
+            appMode: appMode,
+            liffId: liffId,
+            isLoggedIn: liff.isLoggedIn()
+          });
+          console.log('✅ LIFF SDK API動作確認完了ログ送信成功');
+        } catch (logError) {
+          console.error('❌ LIFF SDK API動作確認完了ログ送信エラー:', logError);
+        }
         
         if (liff.isLoggedIn()) {
           console.log('LIFF認証済み: 実際のユーザー情報を取得');
