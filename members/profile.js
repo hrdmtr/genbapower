@@ -215,11 +215,24 @@ async function initializeLIFF() {
         
       } catch (error) {
         console.error('デベロップメントモードLIFF初期化エラー:', error);
-        await sendLogToServer('error', '❌ LIFF初期化エラー', { 
+        await sendLogToServer('error', '❌ LIFF初期化失敗（テストユーザーにフォールバック）', { 
           error: error.message,
           appMode: appMode,
           liffId: liffId 
         });
+        
+        lineUserId = 'U1234567890abcdef';
+        userProfile = {
+          userId: lineUserId,
+          displayName: 'テストユーザー（LIFF初期化失敗）'
+        };
+        
+        document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">デベロップメントモード: LIFF初期化失敗、テストユーザーで動作</div>';
+        document.getElementById('auth-error').classList.remove('d-none');
+        
+        await fetchUserInfo();
+        hideLoading();
+        return;
       }
     }
     
