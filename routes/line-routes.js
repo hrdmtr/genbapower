@@ -111,10 +111,20 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
   console.log('🔍 === /user/:userId エンドポイント開始 ===');
   console.log('🔍 req.params.userId:', req.params.userId);
   console.log('🔍 req.lineUser:', req.lineUser);
+  console.log('🔍 リクエストヘッダー詳細:', {
+    'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
+    'content-type': req.headers['content-type'],
+    'user-agent': req.headers['user-agent']?.substring(0, 30) + '...'
+  });
   
   try {
     const userId = req.params.userId;
     console.log('🔍 処理対象userId:', userId);
+    console.log('🔍 認証ミドルウェア通過後のreq.lineUser:', {
+      userId: req.lineUser.userId,
+      displayName: req.lineUser.displayName,
+      hasAccessToken: !!req.lineUser.accessToken
+    });
     
     const LIFF_ID = process.env.LIFF_ID || 'dummy_liff_id';
     if (req.lineUser.userId !== userId && process.env.APP_MODE !== 'local' && LIFF_ID !== 'dummy_liff_id') {
@@ -154,6 +164,13 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
           updated_at: new Date()
         };
         
+        console.log('✅ モックユーザーデータを返却:', {
+          user_id: mockUser.line_user_id,
+          display_name: mockUser.display_name,
+          point_balance: mockUser.point_balance,
+          member_rank: mockUser.member_rank
+        });
+        
         return res.status(200).json({
           success: true,
           data: {
@@ -173,6 +190,13 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
       });
     }
     
+    console.log('✅ 実際のユーザーデータを返却:', {
+      user_id: user.line_user_id,
+      display_name: user.display_name,
+      point_balance: user.point_balance,
+      member_rank: user.member_rank
+    });
+    
     res.status(200).json({
       success: true,
       data: {
@@ -184,7 +208,14 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('LINE会員情報取得エラー:', error);
+    console.error('❌ LINE会員情報取得エラー:', error);
+    console.error('❌ エラー詳細:', {
+      message: error.message,
+      stack: error.stack?.substring(0, 200) + '...',
+      userId: req.params.userId,
+      lineUser: req.lineUser
+    });
+    
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました'
