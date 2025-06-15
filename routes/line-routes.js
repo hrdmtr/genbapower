@@ -125,26 +125,26 @@ const lineAuthMiddleware = (req, res, next) => {
 };
 
 router.get('/user/:userId', (req, res, next) => {
-  console.log('🔥🔥🔥 === ROUTE HIT: /user/:userId ===');
-  console.log('🔥🔥🔥 req.method:', req.method);
-  console.log('🔥🔥🔥 req.url:', req.url);
-  console.log('🔥🔥🔥 req.params:', req.params);
-  console.log('🔥🔥🔥 req.headers:', {
+  console.log('[trace for devin] === ROUTE HIT: /user/:userId ===');
+  console.log('[trace for devin] req.method:', req.method);
+  console.log('[trace for devin] req.url:', req.url);
+  console.log('[trace for devin] req.params:', req.params);
+  console.log('[trace for devin] req.headers:', {
     'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
     'content-type': req.headers['content-type'],
     'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
   });
   next();
 }, lineAuthMiddleware, async (req, res) => {
-  console.log('🔥 === /user/:userId エンドポイント開始 ===');
-  console.log('🔥 req.params.userId:', req.params.userId);
-  console.log('🔥 req.lineUser:', req.lineUser);
-  console.log('🔥 リクエストヘッダー詳細:', {
+  console.log('[trace for devin] === /user/:userId エンドポイント開始 ===');
+  console.log('[trace for devin] req.params.userId:', req.params.userId);
+  console.log('[trace for devin] req.lineUser:', req.lineUser);
+  console.log('[trace for devin] リクエストヘッダー詳細:', {
     'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
     'content-type': req.headers['content-type'],
     'user-agent': req.headers['user-agent']?.substring(0, 30) + '...'
   });
-  console.log('🔥 認証ミドルウェア通過確認 - req.lineUserが設定されているか:', !!req.lineUser);
+  console.log('[trace for devin] 認証ミドルウェア通過確認 - req.lineUserが設定されているか:', !!req.lineUser);
   
   try {
     const userId = req.params.userId;

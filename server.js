@@ -30,8 +30,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-  console.log('🌍 GLOBAL REQUEST:', req.method, req.url, req.path);
-  console.log('🌍 Request headers:', {
+  console.log('[trace for devin] GLOBAL REQUEST:', req.method, req.url, req.path);
+  console.log('[trace for devin] Request headers:', {
     'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
     'content-type': req.headers['content-type']
   });
@@ -40,11 +40,11 @@ app.use((req, res, next) => {
 
 const { lineAuthMiddleware } = require('./routes/line-routes');
 
-console.log('🔥🔥🔥 Registering LINE routes at /api/line');
+console.log('[trace for devin] Registering LINE routes at /api/line');
 app.use('/api/line', (req, res, next) => {
-  console.log('🔥🔥🔥 LINE ROUTE REQUEST:', req.method, req.url);
-  console.log('🔥🔥🔥 Full request path:', req.path);
-  console.log('🔥🔥🔥 Request headers:', {
+  console.log('[trace for devin] LINE ROUTE REQUEST:', req.method, req.url);
+  console.log('[trace for devin] Full request path:', req.path);
+  console.log('[trace for devin] Request headers:', {
     'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
     'content-type': req.headers['content-type']
   });
