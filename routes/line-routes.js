@@ -55,8 +55,14 @@ const lineAuthMiddleware = (req, res, next) => {
       console.log('✅ 実際のユーザーIDとアクセストークンを使用');
       req.lineUser = {
         userId: userId,
-        displayName: 'Real User (Development Mode)',
+        displayName: 'haradm (Development Mode)',
         accessToken: accessToken
+      };
+    } else if (userId === 'U34ec5d230907eaf36c3cb9c362c14181') {
+      console.log('✅ 既知の実際のユーザーIDを使用');
+      req.lineUser = {
+        userId: userId,
+        displayName: 'haradm (Development Mode - Known User)'
       };
     } else {
       console.log('✅ テストユーザーにフォールバック');
