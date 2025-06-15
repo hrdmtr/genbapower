@@ -81,11 +81,11 @@ async function initializeLIFF() {
     console.log('現在のURL:', window.location.href);
     console.log('Referrer:', document.referrer);
     
-    if (appMode === 'local' || appMode === 'development' || liffId === 'dummy_liff_id') {
+    if (appMode === 'local' || liffId === 'dummy_liff_id') {
       console.log('認証バイパス条件検出:', { appMode, liffId });
       
-      const bypassReason = appMode === 'local' ? 'ローカルモード' : (appMode === 'development' ? 'デベロップメントモード' : 'LIFF設定未完了');
-      const alertClass = appMode === 'local' ? 'alert-info' : (appMode === 'development' ? 'alert-info' : 'alert-warning');
+      const bypassReason = appMode === 'local' ? 'ローカルモード' : 'LIFF設定未完了';
+      const alertClass = appMode === 'local' ? 'alert-info' : 'alert-warning';
       
       document.getElementById('auth-error').innerHTML = `<div class="alert ${alertClass}">${bypassReason}: 認証をバイパスして動作しています</div>`;
       document.getElementById('auth-error').classList.remove('d-none');
@@ -106,6 +106,50 @@ async function initializeLIFF() {
       await fetchUserInfo();
       hideLoading();
       return;
+    }
+    
+    if (appMode === 'development') {
+      console.log('デベロップメントモード: LIFF初期化を実行しますが認証を緩和します');
+      
+      try {
+        await liff.init({ liffId });
+        
+        if (liff.isLoggedIn()) {
+          console.log('LIFF認証済み: 実際のユーザー情報を取得');
+          userProfile = await liff.getProfile();
+          lineUserId = userProfile.userId;
+          
+          await sendLogToServer('info', '🆔 実際のlineUserId設定完了', { 
+            lineUserId: lineUserId, 
+            displayName: userProfile.displayName,
+            appMode: appMode,
+            liffId: liffId 
+          });
+        } else {
+          console.log('LIFF未認証: テストユーザーを使用');
+          lineUserId = 'U1234567890abcdef';
+          userProfile = {
+            userId: lineUserId,
+            displayName: 'テストユーザー（デベロップメントモード・未認証）'
+          };
+          
+          await sendLogToServer('info', '🆔 テストlineUserId設定完了', { 
+            lineUserId: lineUserId, 
+            appMode: appMode,
+            liffId: liffId 
+          });
+        }
+        
+        document.getElementById('auth-error').innerHTML = '<div class="alert alert-info">デベロップメントモード: 認証を緩和して動作しています</div>';
+        document.getElementById('auth-error').classList.remove('d-none');
+        
+        await fetchUserInfo();
+        hideLoading();
+        return;
+        
+      } catch (error) {
+        console.error('デベロップメントモードLIFF初期化エラー:', error);
+      }
     }
     
     if (!liffId || liffId === 'dummy_liff_id') {
@@ -226,7 +270,7 @@ async function fetchUserInfo() {
       'Content-Type': 'application/json'
     };
     
-    if (appMode !== 'local' && appMode !== 'development' && liffId !== 'dummy_liff_id' && typeof liff !== 'undefined' && liff.getAccessToken) {
+    if (appMode !== 'local' && liffId !== 'dummy_liff_id' && typeof liff !== 'undefined' && liff.getAccessToken) {
       try {
         const accessToken = liff.getAccessToken();
         if (accessToken) {
