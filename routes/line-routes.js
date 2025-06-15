@@ -32,12 +32,13 @@ const lineAuthMiddleware = (req, res, next) => {
   console.log('🔥 Access token first 20 chars:', accessToken ? accessToken.substring(0, 20) + '...' : 'NO_TOKEN');
   console.log('🔥 === パラメータ抽出完了 ===');
   
-  if (APP_MODE === 'local') {
-    console.log('ローカルモード: LINE認証をバイパスします');
+  if (APP_MODE === 'local' || APP_MODE === 'development') {
+    const bypassReason = APP_MODE === 'local' ? 'ローカルモード' : 'デベロップメントモード';
+    console.log(`🔥 ✅ ${bypassReason}: LINE認証をバイパスします`);
     
     req.lineUser = {
       userId: userId || 'U1234567890abcdef',
-      displayName: 'テストユーザー'
+      displayName: APP_MODE === 'development' ? 'haradm (Development Mode - Known User)' : 'テストユーザー'
     };
     
     console.log('設定されたユーザー:', req.lineUser);
