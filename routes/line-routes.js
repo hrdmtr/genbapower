@@ -7,14 +7,25 @@ const lineAuthMiddleware = (req, res, next) => {
   const APP_MODE = process.env.APP_MODE || 'development';
   
   console.log(`=== バックエンド認証チェック ===`);
-  console.log('リクエストパス:', req.path);
-  console.log('APP_MODE:', APP_MODE);
+  console.log('🔍 リクエストパス:', req.path);
+  console.log('🔍 APP_MODE:', APP_MODE);
+  console.log('🔍 リクエストメソッド:', req.method);
+  console.log('🔍 リクエストヘッダー:', {
+    'content-type': req.headers['content-type'],
+    'x-line-access-token': req.headers['x-line-access-token'] ? '***TOKEN_EXISTS***' : 'NO_TOKEN',
+    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
+  });
   
   const body = req.body || {};
   const query = req.query || {};
   const userId = body.user_id || query.user_id || req.params.userId;
+  const accessToken = req.headers['x-line-access-token'];
   
-  console.log('Extracted user_id:', userId);
+  console.log('🔍 Extracted user_id:', userId);
+  console.log('🔍 Access token present:', !!accessToken);
+  console.log('🔍 Access token length:', accessToken ? accessToken.length : 0);
+  console.log('🔍 Query params:', query);
+  console.log('🔍 Body params:', body);
   
   if (APP_MODE === 'local') {
     console.log('ローカルモード: LINE認証をバイパスします');
@@ -33,14 +44,33 @@ const lineAuthMiddleware = (req, res, next) => {
   //
   //
   if (APP_MODE === 'development') {
-    console.log('デベロップメントモード: LINE認証をバイパスします');
+    console.log('✅ デベロップメントモード: LINE認証をバイパスします');
+    console.log('🔍 Development mode details:', {
+      userId: userId,
+      hasAccessToken: !!accessToken,
+      tokenLength: accessToken ? accessToken.length : 0
+    });
     
-    req.lineUser = {
-      userId: userId || 'U1234567890abcdef',
-      displayName: 'テストユーザー（デベロップメントモード）'
-    };
+    if (userId && accessToken) {
+      console.log('✅ 実際のユーザーIDとアクセストークンを使用');
+      req.lineUser = {
+        userId: userId,
+        displayName: 'Real User (Development Mode)',
+        accessToken: accessToken
+      };
+    } else {
+      console.log('✅ テストユーザーにフォールバック');
+      req.lineUser = {
+        userId: userId || 'U1234567890abcdef',
+        displayName: 'テストユーザー（デベロップメントモード）'
+      };
+    }
     
-    console.log('設定されたユーザー:', req.lineUser);
+    console.log('✅ 設定されたユーザー:', {
+      userId: req.lineUser.userId,
+      displayName: req.lineUser.displayName,
+      hasAccessToken: !!req.lineUser.accessToken
+    });
     return next();
   }
   
@@ -78,8 +108,13 @@ const lineAuthMiddleware = (req, res, next) => {
 };
 
 router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
+  console.log('🔍 === /user/:userId エンドポイント開始 ===');
+  console.log('🔍 req.params.userId:', req.params.userId);
+  console.log('🔍 req.lineUser:', req.lineUser);
+  
   try {
     const userId = req.params.userId;
+    console.log('🔍 処理対象userId:', userId);
     
     const LIFF_ID = process.env.LIFF_ID || 'dummy_liff_id';
     if (req.lineUser.userId !== userId && process.env.APP_MODE !== 'local' && LIFF_ID !== 'dummy_liff_id') {
@@ -91,15 +126,24 @@ router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
     
     let user;
     try {
+      console.log('🔍 データベースからユーザー情報を取得中...');
       user = await getLineUserById(userId);
+      console.log('🔍 データベースユーザー取得結果:', user ? 'ユーザー見つかりました' : 'ユーザーが見つかりません');
     } catch (dbError) {
-      console.log('データベースエラー: モックユーザーを使用します', dbError.message);
+      console.log('❌ データベースエラー: モックユーザーを使用します', dbError.message);
       user = null;
     }
     
     if (!user) {
+      console.log('🔍 ユーザーが見つからない場合の処理開始');
+      console.log('🔍 認証バイパス条件チェック:', {
+        'APP_MODE === local': process.env.APP_MODE === 'local',
+        'APP_MODE === development': process.env.APP_MODE === 'development',
+        'LIFF_ID === dummy_liff_id': LIFF_ID === 'dummy_liff_id'
+      });
+      
       if (process.env.APP_MODE === 'local' || process.env.APP_MODE === 'development' || LIFF_ID === 'dummy_liff_id') {
-        console.log('認証バイパスモード: テストユーザーを自動作成します');
+        console.log('✅ 認証バイパスモード: テストユーザーを自動作成します');
         const mockUser = {
           line_user_id: userId,
           display_name: req.lineUser.displayName || 'テストユーザー',
