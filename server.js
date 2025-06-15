@@ -31,7 +31,16 @@ app.use(express.urlencoded({ extended: true }));
 
 const { lineAuthMiddleware } = require('./routes/line-routes');
 
-app.use('/api/line', require('./routes/line-routes'));
+console.log('🔥🔥🔥 Registering LINE routes at /api/line');
+app.use('/api/line', (req, res, next) => {
+  console.log('🔥🔥🔥 LINE ROUTE REQUEST:', req.method, req.url);
+  console.log('🔥🔥🔥 Full request path:', req.path);
+  console.log('🔥🔥🔥 Request headers:', {
+    'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
+    'content-type': req.headers['content-type']
+  });
+  next();
+}, require('./routes/line-routes'));
 
 console.log('Registering /version endpoint...');
 app.get('/version', (req, res) => {

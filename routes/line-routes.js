@@ -124,7 +124,18 @@ const lineAuthMiddleware = (req, res, next) => {
   next();
 };
 
-router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
+router.get('/user/:userId', (req, res, next) => {
+  console.log('🔥🔥🔥 === ROUTE HIT: /user/:userId ===');
+  console.log('🔥🔥🔥 req.method:', req.method);
+  console.log('🔥🔥🔥 req.url:', req.url);
+  console.log('🔥🔥🔥 req.params:', req.params);
+  console.log('🔥🔥🔥 req.headers:', {
+    'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
+    'content-type': req.headers['content-type'],
+    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
+  });
+  next();
+}, lineAuthMiddleware, async (req, res) => {
   console.log('🔥 === /user/:userId エンドポイント開始 ===');
   console.log('🔥 req.params.userId:', req.params.userId);
   console.log('🔥 req.lineUser:', req.lineUser);
