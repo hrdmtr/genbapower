@@ -148,15 +148,15 @@ router.get('/user/:userId', (req, res, next) => {
   
   try {
     const userId = req.params.userId;
-    console.log('🔥 処理対象userId:', userId);
-    console.log('🔥 認証ミドルウェア通過後のreq.lineUser:', {
+    console.log('[trace for devin] 処理対象userId:', userId);
+    console.log('[trace for devin] 認証ミドルウェア通過後のreq.lineUser:', {
       userId: req.lineUser?.userId,
       displayName: req.lineUser?.displayName,
       hasAccessToken: !!req.lineUser?.accessToken
     });
     
     if (!req.lineUser) {
-      console.log('🔥 ❌ CRITICAL ERROR: req.lineUserが設定されていません！');
+      console.log('[trace for devin] ❌ CRITICAL ERROR: req.lineUserが設定されていません！');
       return res.status(500).json({
         success: false,
         message: '認証ミドルウェアエラー: ユーザー情報が設定されていません'
@@ -173,17 +173,17 @@ router.get('/user/:userId', (req, res, next) => {
     
     let user;
     try {
-      console.log('🔍 データベースからユーザー情報を取得中...');
+      console.log('[trace for devin] データベースからユーザー情報を取得中...');
       user = await getLineUserById(userId);
-      console.log('🔍 データベースユーザー取得結果:', user ? 'ユーザー見つかりました' : 'ユーザーが見つかりません');
+      console.log('[trace for devin] データベースユーザー取得結果:', user ? 'ユーザー見つかりました' : 'ユーザーが見つかりません');
     } catch (dbError) {
-      console.log('❌ データベースエラー: モックユーザーを使用します', dbError.message);
+      console.log('[trace for devin] ❌ データベースエラー: モックユーザーを使用します', dbError.message);
       user = null;
     }
     
     if (!user) {
-      console.log('🔍 ユーザーが見つからない場合の処理開始');
-      console.log('🔍 認証バイパス条件チェック:', {
+      console.log('[trace for devin] ユーザーが見つからない場合の処理開始');
+      console.log('[trace for devin] 認証バイパス条件チェック:', {
         'APP_MODE === local': process.env.APP_MODE === 'local',
         'APP_MODE === development': process.env.APP_MODE === 'development',
         'LIFF_ID === dummy_liff_id': LIFF_ID === 'dummy_liff_id'
@@ -259,7 +259,7 @@ router.get('/user/:userId', (req, res, next) => {
       });
     }
     
-    console.log('✅ 実際のユーザーデータを返却:', {
+    console.log('[trace for devin] ✅ 実際のユーザーデータを返却:', {
       user_id: user.line_user_id,
       display_name: user.display_name,
       point_balance: user.point_balance,
