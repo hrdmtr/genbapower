@@ -81,6 +81,14 @@ async function initializeLIFF() {
     console.log('現在のURL:', window.location.href);
     console.log('Referrer:', document.referrer);
     
+    await sendLogToServer('info', '🔍 認証フロー開始', { 
+      appMode: appMode,
+      liffId: liffId,
+      'appMode === local': appMode === 'local',
+      'liffId === dummy_liff_id': liffId === 'dummy_liff_id',
+      'appMode === development': appMode === 'development'
+    });
+    
     if (appMode === 'local' || liffId === 'dummy_liff_id') {
       console.log('認証バイパス条件検出:', { appMode, liffId });
       
@@ -110,6 +118,10 @@ async function initializeLIFF() {
     
     if (appMode === 'development') {
       console.log('デベロップメントモード: LIFF初期化を実行しますが認証を緩和します');
+      await sendLogToServer('info', '🔧 LIFF初期化開始', { 
+        appMode: appMode,
+        liffId: liffId 
+      });
       
       try {
         await liff.init({ liffId });
@@ -149,6 +161,11 @@ async function initializeLIFF() {
         
       } catch (error) {
         console.error('デベロップメントモードLIFF初期化エラー:', error);
+        await sendLogToServer('error', '❌ LIFF初期化エラー', { 
+          error: error.message,
+          appMode: appMode,
+          liffId: liffId 
+        });
       }
     }
     
