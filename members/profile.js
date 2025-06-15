@@ -295,15 +295,25 @@ async function initializeLIFF() {
 
 async function fetchUserInfo() {
   try {
-    console.log('🚀 === fetchUserInfo開始 ===');
-    console.log('🔍 現在のlineUserId:', lineUserId);
-    console.log('🔍 現在のuserProfile:', userProfile);
-    console.log('🔍 現在のappMode:', appMode);
-    console.log('🔍 現在のliffId:', liffId);
-    console.log('🔍 現在のapiBaseUrl:', apiBaseUrl);
+    console.log('[trace for devin] === fetchUserInfo開始 ===');
+    console.log('[trace for devin] 現在のlineUserId:', lineUserId);
+    console.log('[trace for devin] 現在のuserProfile:', userProfile);
+    console.log('[trace for devin] 現在のappMode:', appMode);
+    console.log('[trace for devin] 現在のliffId:', liffId);
+    console.log('[trace for devin] 現在のapiBaseUrl:', apiBaseUrl);
+    
+    await sendLogToServer('info', '[trace for devin] fetchUserInfo開始', {
+      lineUserId: lineUserId,
+      appMode: appMode,
+      liffId: liffId,
+      apiBaseUrl: apiBaseUrl
+    });
     
     if (!lineUserId) {
-      console.error('❌ lineUserIdが設定されていません');
+      console.error('[trace for devin] lineUserIdが設定されていません');
+      await sendLogToServer('error', '[trace for devin] lineUserId未設定エラー', {
+        lineUserId: lineUserId
+      });
       throw new Error('ユーザーIDが設定されていません');
     }
     
@@ -339,10 +349,21 @@ async function fetchUserInfo() {
       lineUserId: lineUserId
     });
     
-    console.log('📤 APIリクエスト送信中...');
+    console.log('[trace for devin] APIリクエスト送信中...');
+    await sendLogToServer('info', '[trace for devin] fetch実行直前', {
+      requestUrl: requestUrl,
+      headers: headers
+    });
+    
     const response = await fetch(requestUrl, {
       method: 'GET',
       headers: headers
+    });
+    
+    await sendLogToServer('info', '[trace for devin] fetch実行完了', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     });
     
     console.log('📥 APIレスポンス受信:');
@@ -387,8 +408,8 @@ async function fetchUserInfo() {
       throw new Error(data.message || 'ユーザー情報の取得に失敗しました');
     }
   } catch (error) {
-    console.error('💥 ユーザー情報取得エラー:', error);
-    console.error('💥 エラー詳細:', {
+    console.error('[trace for devin] ユーザー情報取得エラー:', error);
+    console.error('[trace for devin] エラー詳細:', {
       message: error.message,
       stack: error.stack,
       lineUserId: lineUserId,
@@ -396,7 +417,7 @@ async function fetchUserInfo() {
       apiBaseUrl: apiBaseUrl
     });
     
-    await sendLogToServer('error', '💥 fetchUserInfo エラー', {
+    await sendLogToServer('error', '[trace for devin] fetchUserInfo エラー', {
       errorMessage: error.message,
       errorStack: error.stack,
       lineUserId: lineUserId,
@@ -404,7 +425,7 @@ async function fetchUserInfo() {
       apiBaseUrl: apiBaseUrl
     });
     
-    showError(error.message);
+    showError('Load failed');
   }
 }
 
