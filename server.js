@@ -650,10 +650,18 @@ app.get('/api/server-settings', async (req, res) => {
         recordsPerPageDescription: '1ページあたりの表示件数'
       }),
       appMode: process.env.APP_MODE || 'development',
-      liffId: process.env.LIFF_ID || (process.env.APP_MODE === 'development' ? '2007512550-RWwLbzgA' : 'dummy_liff_id'),
       lineChannelId: process.env.LINE_CHANNEL_ID || '',
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
     };
+    
+    if (process.env.LIFF_ID) {
+      responseData.liffId = process.env.LIFF_ID;
+    } else if (process.env.APP_MODE === 'development') {
+      responseData.liffId = '2007512550-RWwLbzgA';
+      console.log('[trace for devin] Forcing real LIFF_ID in development mode:', responseData.liffId);
+    } else {
+      responseData.liffId = settings?.liffId || 'dummy_liff_id';
+    }
     
     res.status(200).json({
       success: true,
@@ -670,10 +678,18 @@ app.get('/api/server-settings', async (req, res) => {
       recordsPerPage: 20,
       recordsPerPageDescription: '1ページあたりの表示件数',
       appMode: process.env.APP_MODE || 'development',
-      liffId: process.env.LIFF_ID || (process.env.APP_MODE === 'development' ? '2007512550-RWwLbzgA' : 'dummy_liff_id'),
       lineChannelId: process.env.LINE_CHANNEL_ID || '',
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
     };
+    
+    if (process.env.LIFF_ID) {
+      data.liffId = process.env.LIFF_ID;
+    } else if (process.env.APP_MODE === 'development') {
+      data.liffId = '2007512550-RWwLbzgA';
+      console.log('[trace for devin] Forcing real LIFF_ID in development mode (error fallback):', data.liffId);
+    } else {
+      data.liffId = 'dummy_liff_id';
+    }
     
     res.status(200).json({
       success: true,
