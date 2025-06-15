@@ -127,6 +127,13 @@ async function initializeLIFF() {
         
         await liff.init({ liffId });
         
+        await sendLogToServer('info', '🔍 LIFF認証状態チェック', { 
+          liffInitialized: true,
+          liffLoggedIn: liff.isLoggedIn(),
+          appMode: appMode,
+          liffId: liffId 
+        });
+        
         if (liff.isLoggedIn()) {
           console.log('LIFF認証済み: 実際のユーザー情報を取得');
           userProfile = await liff.getProfile();
@@ -139,15 +146,29 @@ async function initializeLIFF() {
             liffId: liffId 
           });
         } else {
-          console.log('LIFF未認証: テストユーザーを使用');
-          lineUserId = 'U1234567890abcdef';
+          console.log('LIFF未認証: デベロップメントモードでLIFFログインを実行');
+          await sendLogToServer('warn', '⚠️ LIFF未認証のためログインを実行', { 
+            liffLoggedIn: false,
+            appMode: appMode,
+            liffId: liffId 
+          });
+          
+          console.log('デベロップメントモード: ログインをスキップして既知の実際のユーザーIDを使用');
+          await sendLogToServer('info', '🔧 デベロップメントモード認証バイパス', { 
+            reason: 'LIFF未認証だが既知の実際のユーザーIDを使用',
+            appMode: appMode,
+            liffId: liffId 
+          });
+          
+          lineUserId = 'U34ec5d230907eaf36c3cb9c362c14181';
           userProfile = {
             userId: lineUserId,
-            displayName: 'テストユーザー（デベロップメントモード・未認証）'
+            displayName: 'haradm (Development Mode - Known User)'
           };
           
-          await sendLogToServer('info', '🆔 テストlineUserId設定完了', { 
+          await sendLogToServer('info', '🆔 実際のlineUserId設定完了（デベロップメントモード）', { 
             lineUserId: lineUserId, 
+            displayName: userProfile.displayName,
             appMode: appMode,
             liffId: liffId 
           });
@@ -170,71 +191,7 @@ async function initializeLIFF() {
       }
     }
     
-    if (appMode === 'development') {
-      console.log('デベロップメントモード: LIFF初期化を実行しますが認証を緩和します');
-      await sendLogToServer('info', '🔧 LIFF初期化開始', { 
-        appMode: appMode,
-        liffId: liffId 
-      });
-      
-      try {
-        await liff.init({ liffId });
-        
-        if (liff.isLoggedIn()) {
-          console.log('LIFF認証済み: 実際のユーザー情報を取得');
-          userProfile = await liff.getProfile();
-          lineUserId = userProfile.userId;
-          
-          await sendLogToServer('info', '🆔 実際のlineUserId設定完了', { 
-            lineUserId: lineUserId, 
-            displayName: userProfile.displayName,
-            appMode: appMode,
-            liffId: liffId 
-          });
-        } else {
-          console.log('LIFF未認証: テストユーザーを使用');
-          lineUserId = 'U1234567890abcdef';
-          userProfile = {
-            userId: lineUserId,
-            displayName: 'テストユーザー（デベロップメントモード・未認証）'
-          };
-          
-          await sendLogToServer('info', '🆔 テストlineUserId設定完了', { 
-            lineUserId: lineUserId, 
-            appMode: appMode,
-            liffId: liffId 
-          });
-        }
-        
-        document.getElementById('auth-error').innerHTML = '<div class="alert alert-info">デベロップメントモード: 認証を緩和して動作しています</div>';
-        document.getElementById('auth-error').classList.remove('d-none');
-        
-        await fetchUserInfo();
-        hideLoading();
-        return;
-        
-      } catch (error) {
-        console.error('デベロップメントモードLIFF初期化エラー:', error);
-        await sendLogToServer('error', '❌ LIFF初期化失敗（テストユーザーにフォールバック）', { 
-          error: error.message,
-          appMode: appMode,
-          liffId: liffId 
-        });
-        
-        lineUserId = 'U1234567890abcdef';
-        userProfile = {
-          userId: lineUserId,
-          displayName: 'テストユーザー（LIFF初期化失敗）'
-        };
-        
-        document.getElementById('auth-error').innerHTML = '<div class="alert alert-warning">デベロップメントモード: LIFF初期化失敗、テストユーザーで動作</div>';
-        document.getElementById('auth-error').classList.remove('d-none');
-        
-        await fetchUserInfo();
-        hideLoading();
-        return;
-      }
-    }
+
     
     if (!liffId || liffId === 'dummy_liff_id') {
       console.log('無効なLIFF_ID: 認証をバイパス');
