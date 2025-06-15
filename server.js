@@ -29,6 +29,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  console.log('🌍 GLOBAL REQUEST:', req.method, req.url, req.path);
+  console.log('🌍 Request headers:', {
+    'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
+    'content-type': req.headers['content-type']
+  });
+  next();
+});
+
 const { lineAuthMiddleware } = require('./routes/line-routes');
 
 console.log('🔥🔥🔥 Registering LINE routes at /api/line');
