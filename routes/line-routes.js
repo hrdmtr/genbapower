@@ -22,11 +22,15 @@ const lineAuthMiddleware = (req, res, next) => {
   const userId = body.user_id || query.user_id || req.params.userId;
   const accessToken = req.headers['x-line-access-token'];
   
-  console.log('🔍 Extracted user_id:', userId);
-  console.log('🔍 Access token present:', !!accessToken);
-  console.log('🔍 Access token length:', accessToken ? accessToken.length : 0);
-  console.log('🔍 Query params:', query);
-  console.log('🔍 Body params:', body);
+  console.log('🔥 === パラメータ抽出詳細 ===');
+  console.log('🔥 req.params:', req.params);
+  console.log('🔥 req.query:', query);
+  console.log('🔥 req.body:', body);
+  console.log('🔥 Extracted user_id:', userId);
+  console.log('🔥 Access token present:', !!accessToken);
+  console.log('🔥 Access token length:', accessToken ? accessToken.length : 0);
+  console.log('🔥 Access token first 20 chars:', accessToken ? accessToken.substring(0, 20) + '...' : 'NO_TOKEN');
+  console.log('🔥 === パラメータ抽出完了 ===');
   
   if (APP_MODE === 'local') {
     console.log('ローカルモード: LINE認証をバイパスします');
@@ -121,23 +125,32 @@ const lineAuthMiddleware = (req, res, next) => {
 };
 
 router.get('/user/:userId', lineAuthMiddleware, async (req, res) => {
-  console.log('🔍 === /user/:userId エンドポイント開始 ===');
-  console.log('🔍 req.params.userId:', req.params.userId);
-  console.log('🔍 req.lineUser:', req.lineUser);
-  console.log('🔍 リクエストヘッダー詳細:', {
+  console.log('🔥 === /user/:userId エンドポイント開始 ===');
+  console.log('🔥 req.params.userId:', req.params.userId);
+  console.log('🔥 req.lineUser:', req.lineUser);
+  console.log('🔥 リクエストヘッダー詳細:', {
     'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
     'content-type': req.headers['content-type'],
     'user-agent': req.headers['user-agent']?.substring(0, 30) + '...'
   });
+  console.log('🔥 認証ミドルウェア通過確認 - req.lineUserが設定されているか:', !!req.lineUser);
   
   try {
     const userId = req.params.userId;
-    console.log('🔍 処理対象userId:', userId);
-    console.log('🔍 認証ミドルウェア通過後のreq.lineUser:', {
-      userId: req.lineUser.userId,
-      displayName: req.lineUser.displayName,
-      hasAccessToken: !!req.lineUser.accessToken
+    console.log('🔥 処理対象userId:', userId);
+    console.log('🔥 認証ミドルウェア通過後のreq.lineUser:', {
+      userId: req.lineUser?.userId,
+      displayName: req.lineUser?.displayName,
+      hasAccessToken: !!req.lineUser?.accessToken
     });
+    
+    if (!req.lineUser) {
+      console.log('🔥 ❌ CRITICAL ERROR: req.lineUserが設定されていません！');
+      return res.status(500).json({
+        success: false,
+        message: '認証ミドルウェアエラー: ユーザー情報が設定されていません'
+      });
+    }
     
     const LIFF_ID = process.env.LIFF_ID || 'dummy_liff_id';
     if (req.lineUser.userId !== userId && process.env.APP_MODE !== 'local' && LIFF_ID !== 'dummy_liff_id') {
