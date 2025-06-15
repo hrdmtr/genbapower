@@ -6,15 +6,16 @@ const { validateChargeTicket, useChargeTicket } = require('../services/charge-ti
 const lineAuthMiddleware = (req, res, next) => {
   const APP_MODE = process.env.APP_MODE || 'development';
   
-  console.log(`=== バックエンド認証チェック ===`);
-  console.log('🔍 リクエストパス:', req.path);
-  console.log('🔍 APP_MODE:', APP_MODE);
-  console.log('🔍 リクエストメソッド:', req.method);
-  console.log('🔍 リクエストヘッダー:', {
+  console.log(`🔥 === バックエンド認証チェック開始 ===`);
+  console.log('🔥 リクエストパス:', req.path);
+  console.log('🔥 APP_MODE:', APP_MODE);
+  console.log('🔥 リクエストメソッド:', req.method);
+  console.log('🔥 リクエストヘッダー:', {
     'content-type': req.headers['content-type'],
     'x-line-access-token': req.headers['x-line-access-token'] ? '***TOKEN_EXISTS***' : 'NO_TOKEN',
     'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
   });
+  console.log('🔥 認証ミドルウェア実行中...');
   
   const body = req.body || {};
   const query = req.query || {};
@@ -44,72 +45,78 @@ const lineAuthMiddleware = (req, res, next) => {
   //
   //
   if (APP_MODE === 'development') {
-    console.log('✅ デベロップメントモード: LINE認証をバイパスします');
-    console.log('🔍 Development mode details:', {
+    console.log('🔥 ✅ デベロップメントモード: LINE認証をバイパスします');
+    console.log('🔥 🔍 Development mode details:', {
       userId: userId,
       hasAccessToken: !!accessToken,
       tokenLength: accessToken ? accessToken.length : 0
     });
     
     if (userId && accessToken) {
-      console.log('✅ 実際のユーザーIDとアクセストークンを使用');
+      console.log('🔥 ✅ 実際のユーザーIDとアクセストークンを使用');
       req.lineUser = {
         userId: userId,
         displayName: 'haradm (Development Mode)',
         accessToken: accessToken
       };
     } else if (userId === 'U34ec5d230907eaf36c3cb9c362c14181') {
-      console.log('✅ 既知の実際のユーザーIDを使用');
+      console.log('🔥 ✅ 既知の実際のユーザーIDを使用');
       req.lineUser = {
         userId: userId,
         displayName: 'haradm (Development Mode - Known User)'
       };
     } else {
-      console.log('✅ テストユーザーにフォールバック');
+      console.log('🔥 ✅ テストユーザーにフォールバック');
       req.lineUser = {
         userId: userId || 'U1234567890abcdef',
         displayName: 'テストユーザー（デベロップメントモード）'
       };
     }
     
-    console.log('✅ 設定されたユーザー:', {
+    console.log('🔥 ✅ 設定されたユーザー:', {
       userId: req.lineUser.userId,
       displayName: req.lineUser.displayName,
       hasAccessToken: !!req.lineUser.accessToken
     });
+    console.log('🔥 デベロップメントモード認証完了 - next()呼び出し');
     return next();
   }
   
   const LIFF_ID = process.env.LIFF_ID || 'dummy_liff_id';
+  console.log('🔥 LIFF_ID チェック:', LIFF_ID);
   if (LIFF_ID === 'dummy_liff_id') {
-    console.log('DUMMY LIFF_ID検出: バックエンド認証をバイパスします');
+    console.log('🔥 DUMMY LIFF_ID検出: バックエンド認証をバイパスします');
     
     req.lineUser = {
       userId: userId || 'U1234567890abcdef',
       displayName: 'テストユーザー（LIFF設定未完了）'
     };
     
-    console.log('設定されたユーザー:', req.lineUser);
+    console.log('🔥 設定されたユーザー:', req.lineUser);
+    console.log('🔥 DUMMY LIFF_ID認証完了 - next()呼び出し');
     return next();
   }
   
   const lineAccessToken = req.headers['x-line-access-token'];
-  console.log('LINE Access Token:', lineAccessToken ? 'あり' : 'なし');
+  console.log('🔥 LINE Access Token:', lineAccessToken ? 'あり' : 'なし');
+  console.log('🔥 実際のLIFF認証フロー開始');
   
   if (!lineAccessToken) {
-    console.log('認証失敗: アクセストークンがありません');
+    console.log('🔥 ❌ 認証失敗: アクセストークンがありません');
     return res.status(401).json({
       success: false,
       message: 'LINE認証が必要です'
     });
   }
   
+  console.log('🔥 ✅ アクセストークン確認済み - ユーザー設定');
   req.lineUser = {
     userId: userId,
     displayName: 'LINE User'
   };
   
-  console.log('認証成功:', req.lineUser);
+  console.log('🔥 ✅ 認証成功:', req.lineUser);
+  console.log('🔥 実際のLIFF認証完了 - next()呼び出し');
   next();
 };
 
