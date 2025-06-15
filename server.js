@@ -29,9 +29,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  console.log('[trace for devin] GLOBAL REQUEST:', req.method, req.url, req.path);
+  console.log('[trace for devin] Request headers:', {
+    'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
+    'content-type': req.headers['content-type']
+  });
+  next();
+});
+
 const { lineAuthMiddleware } = require('./routes/line-routes');
 
-app.use('/api/line', require('./routes/line-routes'));
+console.log('[trace for devin] Registering LINE routes at /api/line');
+app.use('/api/line', (req, res, next) => {
+  console.log('[trace for devin] LINE ROUTE REQUEST:', req.method, req.url);
+  console.log('[trace for devin] Full request path:', req.path);
+  console.log('[trace for devin] Request headers:', {
+    'x-line-access-token': req.headers['x-line-access-token'] ? `TOKEN_LENGTH_${req.headers['x-line-access-token'].length}` : 'NO_TOKEN',
+    'content-type': req.headers['content-type']
+  });
+  next();
+}, require('./routes/line-routes'));
 
 console.log('Registering /version endpoint...');
 app.get('/version', (req, res) => {
@@ -631,11 +649,19 @@ app.get('/api/server-settings', async (req, res) => {
         recordsPerPage: 20,
         recordsPerPageDescription: '1ページあたりの表示件数'
       }),
-      appMode: process.env.APP_MODE || 'local',
-      liffId: process.env.LIFF_ID || 'dummy_liff_id',
+      appMode: process.env.APP_MODE || 'development',
       lineChannelId: process.env.LINE_CHANNEL_ID || '',
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
     };
+    
+    if (process.env.LIFF_ID) {
+      responseData.liffId = process.env.LIFF_ID;
+    } else if (process.env.APP_MODE === 'development') {
+      responseData.liffId = '2007512550-RWwLbzgA';
+      console.log('[trace for devin] Forcing real LIFF_ID in development mode:', responseData.liffId);
+    } else {
+      responseData.liffId = settings?.liffId || 'dummy_liff_id';
+    }
     
     res.status(200).json({
       success: true,
@@ -644,20 +670,30 @@ app.get('/api/server-settings', async (req, res) => {
   } catch (error) {
     console.error('サーバー設定取得エラー:', error);
     
+    const data = {
+      appName: 'QRコードリーダー注文システム',
+      appNameDescription: 'アプリケーションの名前',
+      baseUrl: 'http://localhost:8000',
+      baseUrlDescription: 'APIリクエストのベースURL',
+      recordsPerPage: 20,
+      recordsPerPageDescription: '1ページあたりの表示件数',
+      appMode: process.env.APP_MODE || 'development',
+      lineChannelId: process.env.LINE_CHANNEL_ID || '',
+      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
+    };
+    
+    if (process.env.LIFF_ID) {
+      data.liffId = process.env.LIFF_ID;
+    } else if (process.env.APP_MODE === 'development') {
+      data.liffId = '2007512550-RWwLbzgA';
+      console.log('[trace for devin] Forcing real LIFF_ID in development mode (error fallback):', data.liffId);
+    } else {
+      data.liffId = 'dummy_liff_id';
+    }
+    
     res.status(200).json({
       success: true,
-      data: {
-        appName: 'QRコードリーダー注文システム',
-        appNameDescription: 'アプリケーションの名前',
-        baseUrl: 'http://localhost:8000',
-        baseUrlDescription: 'APIリクエストのベースURL',
-        recordsPerPage: 20,
-        recordsPerPageDescription: '1ページあたりの表示件数',
-        appMode: process.env.APP_MODE || 'development',
-        liffId: process.env.LIFF_ID || 'dummy_liff_id',
-        lineChannelId: process.env.LINE_CHANNEL_ID || '',
-        apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
-      },
+      data: data,
       message: 'デフォルト設定を使用しています (MongoDB接続エラー)'
     });
   }
@@ -679,5 +715,24 @@ app.post('/api/server-settings', async (req, res) => {
       message: 'サーバー設定が保存されました (モック保存)',
       mockSave: true
     });
+  }
+});
+
+app.post('/api/frontend-logs', (req, res) => {
+  try {
+    const { level, message, context, timestamp } = req.body;
+    const logPrefix = level === 'error' ? '❌ [FRONTEND]' : 
+                     level === 'warn' ? '⚠️ [FRONTEND]' : 
+                     '📱 [FRONTEND]';
+    
+    console.log(`${logPrefix} ${timestamp}: ${message}`);
+    if (context) {
+      console.log(`${logPrefix} Context:`, JSON.stringify(context, null, 2));
+    }
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Frontend logging endpoint error:', error);
+    res.status(500).json({ success: false, message: 'Logging failed' });
   }
 });

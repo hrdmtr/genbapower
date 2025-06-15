@@ -63,14 +63,15 @@ async function initializeLIFF() {
   try {
     showLoading();
     
-    if (appMode === 'local') {
-      console.log('ローカルモード: LIFF認証をバイパスします');
+    if (appMode === 'local' || appMode === 'development' || liffId === 'dummy_liff_id') {
+      const bypassReason = appMode === 'local' ? 'ローカルモード' : (appMode === 'development' ? 'デベロップメントモード' : 'LIFF設定未完了');
+      console.log(`${bypassReason}: LIFF認証をバイパスします`);
       document.getElementById('auth-error').classList.remove('d-none');
       
       lineUserId = 'U1234567890abcdef';
       userProfile = {
         userId: lineUserId,
-        displayName: 'テストユーザー'
+        displayName: `テストユーザー（${bypassReason}）`
       };
       
       await fetchUserInfo();
@@ -84,10 +85,7 @@ async function initializeLIFF() {
       console.log('現在のURL:', window.location.href);
       console.log('Referrer:', document.referrer);
       
-      const cachedAuthState = checkAuthenticationState();
-      console.log('キャッシュされた認証状態:', cachedAuthState);
-      
-      if (!isLoggedIn && !cachedAuthState) {
+      if (!isLoggedIn) {
         console.log('未ログイン: ログインページにリダイレクト');
         
         if (!document.referrer.includes('/login.html') && !document.referrer.includes('liff.line.me')) {
@@ -102,10 +100,7 @@ async function initializeLIFF() {
         return;
       }
       
-      if (isLoggedIn) {
-        console.log('ログイン済み: 認証状態をキャッシュ');
-        setAuthenticationState(true);
-      }
+
       
       if (!liff.isInClient()) {
         document.getElementById('auth-error').classList.remove('d-none');
@@ -130,7 +125,17 @@ async function initializeLIFF() {
 
 async function fetchUserInfo() {
   try {
-    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`);
+    const headers = {};
+    if (appMode !== 'local' && appMode !== 'development' && liffId !== 'dummy_liff_id') {
+      const accessToken = liff.getAccessToken();
+      if (accessToken) {
+        headers['x-line-access-token'] = accessToken;
+      }
+    }
+    
+    const response = await fetch(`${apiBaseUrl}/user/${lineUserId}?user_id=${lineUserId}`, {
+      headers
+    });
     
     if (!response.ok) {
       throw new Error('ユーザー情報の取得に失敗しました');
@@ -551,27 +556,4 @@ function showLoading() {
 
 function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
-}
-
-function checkAuthenticationState() {
-  const authState = sessionStorage.getItem('liff_auth_state');
-  const currentTime = Date.now();
-  
-  if (authState) {
-    const { timestamp, isAuthenticated } = JSON.parse(authState);
-    if (currentTime - timestamp < 300000 && isAuthenticated) {
-      console.log('キャッシュされた認証状態を使用');
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-function setAuthenticationState(isAuthenticated) {
-  const authState = {
-    timestamp: Date.now(),
-    isAuthenticated: isAuthenticated
-  };
-  sessionStorage.setItem('liff_auth_state', JSON.stringify(authState));
 }
