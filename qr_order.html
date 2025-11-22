@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコードで注文</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .test-area {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .input-display {
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            font-family: monospace;
+            position: relative;
+        }
+        .input-display::before {
+            content: "QRコード入力:";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 12px;
+            color: #777;
+        }
+        .log-container {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #fff;
+            font-family: monospace;
+            position: relative;
+        }
+        .log-container::before {
+            content: "読み取りログ:";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 12px;
+            color: #777;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-entry .timestamp {
+            color: #888;
+            margin-right: 10px;
+            font-size: 0.8em;
+        }
+        .log-entry .content {
+            color: #333;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            display: none;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #388E3C;
+        }
+        .warning {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            color: #666;
+        }
+        .order-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+            display: none;
+        }
+        .order-info h3 {
+            margin-top: 0;
+            color: #0d47a1;
+        }
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .primary-button {
+            background-color: #2196F3;
+        }
+        .primary-button:hover {
+            background-color: #1976D2;
+        }
+        .cancel-button {
+            background-color: #f44336;
+        }
+        .cancel-button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body onload="console.log('body onload イベント発火')">
+    <div class="container">
+        <h1>QRコードで注文</h1>
+        
+        <div class="test-area">
+            <div class="input-display" id="input-display">QRコードをスキャンしてください...</div>
+            
+            <div class="log-container" id="log-container"></div>
+            
+            <div class="status" id="status-message">ステータスメッセージがここに表示されます</div>
+            
+            <div class="order-info" id="order-info">
+                <h3>注文情報</h3>
+                <div id="order-details"></div>
+                <div class="action-buttons">
+                    <button id="cancel-order" class="cancel-button">キャンセル</button>
+                    <button id="confirm-order" class="primary-button">注文確定</button>
+                </div>
+            </div>
+            
+            <div class="button-container">
+                <button id="clear-log">ログをクリア</button>
+                <button id="test-qr" class="primary-button">テストQR生成</button>
+            </div>
+            
+            <div class="warning">
+                <p><strong>注意:</strong> このページは、キーボードエミュレーションモード（KBW）で動作するQRコードリーダー向けに設計されています。QRコードを読み取ると、テキストボックスがフォーカスされていなくても入力として認識されます。</p>
+                <p>対応QRコード形式:</p>
+                <ul>
+                    <li><code>PRODUCT|P001</code> - 商品ID</li>
+                    <li><code>TABLE|TABLE01</code> - テーブル番号</li>
+                    <li><code>id=001,tab=01</code> - 商品IDとテーブル番号</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // デバッグ用に追加: orders.html との連携関数
+        window.debugCheckOrders = function() {
+            console.log('===== 注文データデバッグ =====');
+            try {
+                // 現在の注文データを取得して分析
+                const ordersData = localStorage.getItem('orders');
+                if (!ordersData) {
+                    console.log('注文データが存在しません');
+                    return;
+                }
+                
+                // 解析
+                const orders = JSON.parse(ordersData);
+                if (!Array.isArray(orders)) {
+                    console.error('注文データが配列ではありません:', typeof orders);
+                    return;
+                }
+                
+                console.log(`注文総数: ${orders.length}件`);
+                
+                // ステータス別にカウント
+                const statusCounts = {};
+                orders.forEach(order => {
+                    const status = order.status || '不明';
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                });
+                
+                console.log('ステータス内訳:');
+                Object.entries(statusCounts).forEach(([status, count]) => {
+                    console.log(`  ${status}: ${count}件`);
+                });
+                
+                // 最新の注文を5件表示
+                console.log('最新の注文:');
+                const recentOrders = orders.slice(-5);
+                recentOrders.forEach((order, i) => {
+                    console.log(`${i+1}. ID: ${order.id}, テーブル: ${order.tableId}, 商品数: ${order.items?.length || 0}, 状態: ${order.status || '不明'}`);
+                });
+                
+                // 注文データが保存されていることをUIに表示
+                alert(`注文データが見つかりました: ${orders.length}件の注文が保存されています。\n\n最新の注文:\nID: ${orders[orders.length-1]?.id}\nテーブル: ${orders[orders.length-1]?.tableId}\n状態: ${orders[orders.length-1]?.status}`);
+                
+            } catch (err) {
+                console.error('注文データ分析エラー:', err);
+                alert('注文データの解析中にエラーが発生しました: ' + err.message);
+            }
+            console.log('===========================');
+        };
+        
+        // デバッグボタンを追加
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.button-container');
+            if (container) {
+                const debugBtn = document.createElement('button');
+                debugBtn.id = 'debug-orders';
+                debugBtn.textContent = 'デバッグ';
+                debugBtn.style.backgroundColor = '#9c27b0';
+                debugBtn.onclick = window.debugCheckOrders;
+                container.appendChild(debugBtn);
+            }
+        });
+
+        // モジュール使用前のキーボードイベントリスナーを設定（最優先で実行）
+        console.log('ドキュメント読み込み開始 - グローバルキーボードイベントリスナーを設定します');
+        
+        // グローバル変数の初期化
+        window.qrInputBuffer = [];
+        
+        // キー入力を監視するグローバルリスナー（DOM読み込み前に設定）
+        window.addEventListener('keydown', function(event) {
+            // console.log('キー入力検知:', event.key);
+            if (window.qrOrderApp && typeof window.qrOrderApp.handleKeyDown === 'function') {
+                window.qrOrderApp.handleKeyDown(event);
+            } else {
+                console.log('qrOrderAppまだ初期化されていません。入力をバッファリングします。');
+                window.qrInputBuffer.push(event);
+            }
+        });
+
+        // DOMContentLoaded より前に実行されるようにする
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded: document 読み込み完了');
+        });
+    </script>
+    
+    <script type="module">
+        import { saveData, getData } from './db_storage.js';
+        import { getProductById } from './products.js';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // 診断情報: localStorage の内容をチェック
+            console.log('====== localStorage 診断 ======');
+            try {
+                const storage = window.localStorage;
+                const storageEstimate = storage ? `使用可能` : `利用不可`;
+                console.log(`localStorage: ${storageEstimate}`);
+                
+                let totalItems = 0;
+                let totalSize = 0;
+                
+                // 各アイテムの内容を確認
+                for (let i = 0; i < storage.length; i++) {
+                    const key = storage.key(i);
+                    const value = storage.getItem(key);
+                    const size = (value ? value.length : 0) * 2; // UTF-16文字で2バイト
+                    totalItems++;
+                    totalSize += size;
+                    
+                    console.log(`アイテム[${i}]: キー=${key}, サイズ=${(size / 1024).toFixed(2)}KB`);
+                    
+                    // orders の場合は中身も解析
+                    if (key === 'orders') {
+                        try {
+                            const orders = JSON.parse(value);
+                            if (Array.isArray(orders)) {
+                                console.log(`orders: ${orders.length}件の注文データ`);
+                                if (orders.length > 0) {
+                                    console.log(`最新の注文ID: ${orders[orders.length-1].id}`);
+                                }
+                            } else {
+                                console.error('orders が配列ではありません:', typeof orders);
+                            }
+                        } catch (e) {
+                            console.error('orders の解析エラー:', e);
+                        }
+                    }
+                }
+                
+                console.log(`合計: ${totalItems}アイテム, ${(totalSize / 1024).toFixed(2)}KB使用中`);
+                console.log(`localStorage制限: 約5MB (ブラウザによって異なる)`);
+            } catch (e) {
+                console.error('localStorage診断エラー:', e);
+            }
+            console.log('===========================');
+            
+            console.log('非モジュールスクリプト開始（db_storage.jsのエラー回避）');
+            
+            const inputDisplay = document.getElementById('input-display');
+            const logContainer = document.getElementById('log-container');
+            const statusMessage = document.getElementById('status-message');
+            const clearLogButton = document.getElementById('clear-log');
+            const testQrButton = document.getElementById('test-qr');
+            const orderInfo = document.getElementById('order-info');
+            const orderDetails = document.getElementById('order-details');
+            const cancelOrderButton = document.getElementById('cancel-order');
+            const confirmOrderButton = document.getElementById('confirm-order');
+            
+            let currentInput = '';
+            let inputBuffer = '';
+            let inputTimeout;
+            
+            // 現在の注文情報
+            let currentOrder = {
+                productId: null,
+                tableId: null
+            };
+            
+            // キー入力ハンドラーを定義
+            function handleKeyDown(event) {
+                // エンターキーが押された場合は入力完了とみなす
+                if (event.key === 'Enter') {
+                    processInput();
+                    return;
+                }
+                
+                // 入力中のタイムアウトをリセット
+                clearTimeout(inputTimeout);
+                
+                // 表示可能な文字の場合、バッファに追加
+                if (event.key.length === 1) {
+                    inputBuffer += event.key;
+                    inputDisplay.textContent = inputBuffer;
+                    
+                    // 一定時間入力がなければ処理
+                    inputTimeout = setTimeout(processInput, 500);
+                }
+            }
+            
+            // グローバルオブジェクトに公開
+            window.qrOrderApp = {
+                handleKeyDown: handleKeyDown
+            };
+            
+            // キーボードイベントの設定
+            document.addEventListener('keydown', function(event) {
+                handleKeyDown(event);
+            });
+            
+            // バッファリングされた入力があれば処理
+            if (window.qrInputBuffer && window.qrInputBuffer.length > 0) {
+                console.log(`バッファリングされた入力 ${window.qrInputBuffer.length}件 を処理します`);
+                const bufferCopy = [...window.qrInputBuffer];
+                window.qrInputBuffer = [];
+                
+                for (const event of bufferCopy) {
+                    handleKeyDown(event);
+                }
+            }
+            
+            // QRコード形式を解析する関数
+            function parseQRCode(code) {
+                try {
+                    const result = {
+                        productId: null,
+                        tableId: null
+                    };
+                    
+                    // 形式1: id=001,tab=01 (カンマ区切り、キーバリュー形式)
+                    if (code.includes('=') && code.includes(',')) {
+                        // パラメータを分割
+                        const params = code.split(',');
+                        
+                        for (const param of params) {
+                            const [key, value] = param.split('=');
+                            
+                            if (key === 'id') {
+                                // 商品IDをP形式に変換（001→P001）
+                                result.productId = `P${value.padStart(3, '0')}`;
+                            } else if (key === 'tab') {
+                                // テーブルIDをTABLE形式に変換（01→TABLE01）
+                                result.tableId = `TABLE${value.padStart(2, '0')}`;
+                            }
+                        }
+                    } 
+                    // 形式2: PRODUCT|P001 または TABLE|TABLE01 (パイプ区切り形式)
+                    else if (code.includes('|')) {
+                        const [type, id] = code.split('|');
+                        
+                        if (type === 'PRODUCT') {
+                            result.productId = id;
+                        } else if (type === 'TABLE') {
+                            result.tableId = id;
+                        }
+                    }
+                    
+                    return result;
+                } catch (error) {
+                    console.error('QRコード解析エラー:', error);
+                    return null;
+                }
+            }
+            
+            // 入力を処理する
+            function processInput() {
+                if (inputBuffer.trim() === '') return;
+                
+                // 処理する入力がある場合
+                const now = new Date();
+                const timestamp = now.toLocaleTimeString('ja-JP');
+                
+                // ログに追加
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `
+                    <span class="timestamp">[${timestamp}]</span>
+                    <span class="content">${inputBuffer}</span>
+                `;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                // QRコードを解析
+                const qrData = parseQRCode(inputBuffer);
+                
+                if (qrData) {
+                    // 商品IDが含まれている場合
+                    if (qrData.productId) {
+                        currentOrder.productId = qrData.productId;
+                        showStatusMessage(`商品ID: ${qrData.productId} を設定しました`, 'success');
+                    }
+                    
+                    // テーブルIDが含まれている場合
+                    if (qrData.tableId) {
+                        currentOrder.tableId = qrData.tableId;
+                        showStatusMessage(`テーブル: ${qrData.tableId} を設定しました`, 'success');
+                    }
+                    
+                    // 両方設定されている場合は注文情報を表示
+                    if (currentOrder.productId && currentOrder.tableId) {
+                        showOrderDetails();
+                    }
+                } else {
+                    showStatusMessage(`無効なQRコード形式: ${inputBuffer}`, 'error');
+                }
+                
+                // 一時的に背景色を変えてフィードバックを与える
+                inputDisplay.style.backgroundColor = '#e8f5e9';
+                setTimeout(() => {
+                    inputDisplay.style.backgroundColor = '#fff';
+                }, 500);
+                
+                // バッファをクリア
+                inputBuffer = '';
+                inputDisplay.textContent = 'QRコードをスキャンしてください...';
+            }
+            
+            // 注文情報を表示
+            function showOrderDetails() {
+                orderDetails.innerHTML = `
+                    <p><strong>テーブル:</strong> ${currentOrder.tableId}</p>
+                    <p><strong>商品ID:</strong> ${currentOrder.productId}</p>
+                `;
+                orderInfo.style.display = 'block';
+            }
+            
+            // ステータスメッセージを表示
+            function showStatusMessage(message, type = 'success') {
+                statusMessage.textContent = message;
+                statusMessage.style.display = 'block';
+                
+                // タイプに応じた背景色の設定
+                if (type === 'success') {
+                    statusMessage.style.backgroundColor = '#e8f5e9';
+                    statusMessage.style.color = '#2e7d32';
+                } else if (type === 'error') {
+                    statusMessage.style.backgroundColor = '#ffebee';
+                    statusMessage.style.color = '#c62828';
+                } else if (type === 'info') {
+                    statusMessage.style.backgroundColor = '#e3f2fd';
+                    statusMessage.style.color = '#0d47a1';
+                }
+                
+                // 3秒後に非表示
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 3000);
+            }
+            
+            // 注文をキャンセル
+            cancelOrderButton.addEventListener('click', function() {
+                currentOrder.productId = null;
+                currentOrder.tableId = null;
+                orderInfo.style.display = 'none';
+                showStatusMessage('注文がキャンセルされました', 'info');
+            });
+            
+            // 注文を確定
+            confirmOrderButton.addEventListener('click', function() {
+                if (currentOrder.productId && currentOrder.tableId) {
+                    const orderId = 'ORD' + Date.now();
+                    
+                    // ログに追加
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'log-entry';
+                    logEntry.innerHTML = `
+                        <span class="timestamp">[${new Date().toLocaleTimeString('ja-JP')}]</span>
+                        <span class="content">注文確定: ${currentOrder.tableId} - ${currentOrder.productId} (${orderId})</span>
+                    `;
+                    logContainer.appendChild(logEntry);
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                    
+                    // MongoDB/localStorage への保存
+                    try {
+                        console.log('★★★ 注文保存開始 ★★★');
+                        console.log('注文内容:', JSON.stringify({
+                            tableId: currentOrder.tableId,
+                            productId: currentOrder.productId,
+                            orderId: orderId
+                        }));
+                        
+                        // 商品情報を取得
+                        const product = getProductById(currentOrder.productId);
+                        const productName = product ? product.name : currentOrder.productId;
+                        const productPrice = product ? product.price : 0;
+                        
+                        // 注文オブジェクトを作成
+                        const orderData = {
+                            id: orderId,
+                            tableId: currentOrder.tableId,
+                            items: [{
+                                productId: currentOrder.productId,
+                                name: productName,
+                                price: productPrice,
+                                timestamp: new Date().toISOString()
+                            }],
+                            timestamp: new Date().toISOString(),
+                            createdAt: new Date().toISOString(),
+                            totalAmount: productPrice,
+                            status: '受付',
+                            statusHistory: [{
+                                from: '',
+                                to: '受付',
+                                timestamp: new Date().toISOString(),
+                                displayTime: new Date().toLocaleString('ja-JP')
+                            }],
+                            orderDetails: {
+                                orderMethod: 'QRコード注文',
+                                staffId: 'SYSTEM',
+                                notes: 'QRコードからの注文'
+                            }
+                        };
+                        
+                        console.log('作成した注文データ:', JSON.stringify(orderData).substring(0, 100) + '...');
+                        
+                        // MongoDB/localStorageに保存
+                        try {
+                            // 既存の注文を取得
+                            const orders = await getData('orders', 'orders') || [];
+                            console.log(`既存の注文数: ${orders.length}件`);
+                            
+                            // 注文を追加
+                            orders.push(orderData);
+                            console.log(`注文追加後の総数: ${orders.length}件`);
+                            
+                            // db_storage.js経由で保存（MongoDB優先、失敗時はlocalStorage）
+                            await saveData('orders', orders, 'orders');
+                            console.log('注文が保存されました (MongoDB/localStorage)');
+                            
+                            // 検証のため再取得
+                            const verifyOrders = await getData('orders', 'orders') || [];
+                            console.log(`検証: ${verifyOrders.length}件の注文データがあります`);
+                            
+                            if (verifyOrders.length > 0) {
+                                const lastOrder = verifyOrders[verifyOrders.length - 1];
+                                console.log(`最新の注文ID: ${lastOrder.id}`);
+                                console.log(`最新の注文内容: テーブル=${lastOrder.tableId}, 商品=${lastOrder.items[0]?.productId}`);
+                            }
+                        } catch (dbError) {
+                            console.error('MongoDB/localStorage保存エラー:', dbError);
+                            
+                            // エラー時はローカルストレージにフォールバック
+                            try {
+                                // 既存のデータを取得
+                                let orders = [];
+                                const savedOrders = localStorage.getItem('orders');
+                                if (savedOrders) {
+                                    orders = JSON.parse(savedOrders);
+                                }
+                                
+                                // データを追加して保存
+                                orders.push(orderData);
+                                localStorage.setItem('orders', JSON.stringify(orders));
+                                console.log('フォールバック: localStorageに直接保存しました');
+                            } catch (fallbackError) {
+                                console.error('フォールバック保存エラー:', fallbackError);
+                                throw fallbackError;
+                            }
+                        }
+                        
+                        // 注文情報をリセット
+                        currentOrder.productId = null;
+                        currentOrder.tableId = null;
+                        orderInfo.style.display = 'none';
+                        console.log('★★★ 注文保存完了 ★★★');
+                        
+                        showStatusMessage(`注文ID: ${orderId} で注文が確定しました`, 'success');
+                    } catch (error) {
+                        console.error('注文保存エラー:', error);
+                        showStatusMessage(`注文保存エラー: ${error.message}`, 'error');
+                    }
+                }
+            });
+            
+            // テストQRコード生成
+            testQrButton.addEventListener('click', function() {
+                // ランダムなQRコードデータを生成
+                const types = ['product', 'table', 'both'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                let testData = '';
+                
+                if (type === 'product') {
+                    const productId = Math.floor(Math.random() * 8) + 1;
+                    testData = `PRODUCT|P${productId.toString().padStart(3, '0')}`;
+                } else if (type === 'table') {
+                    const tableId = Math.floor(Math.random() * 5) + 1;
+                    testData = `TABLE|TABLE${tableId.toString().padStart(2, '0')}`;
+                } else {
+                    const productId = Math.floor(Math.random() * 8) + 1;
+                    const tableId = Math.floor(Math.random() * 5) + 1;
+                    testData = `id=${productId.toString().padStart(3, '0')},tab=${tableId.toString().padStart(2, '0')}`;
+                }
+                
+                // 入力バッファに設定
+                inputBuffer = testData;
+                inputDisplay.textContent = testData;
+                
+                // 処理
+                processInput();
+            });
+            
+            // ログクリアボタンのイベント
+            clearLogButton.addEventListener('click', function() {
+                logContainer.innerHTML = '';
+                statusMessage.style.display = 'none';
+            });
+            
+            console.log('QRコードリーダー初期化完了 - 準備完了');
+        });
+    </script>
+    <script src="navigation.js"></script>
+</body>
+</html>

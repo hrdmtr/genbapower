@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ホールスタッフ向けリスト - QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .orders-container {
+            margin-top: 20px;
+            display: block;
+            width: 100%;
+            min-height: 200px;
+            position: relative;
+        }
+        
+        .order-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            padding-top: 60px; /* ステータス表示のための余白を上部に追加 */
+            padding-right: 150px; /* 経過時間表示のための余白を増やす */
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #3498db;
+            position: relative;
+            transition: all 0.3s ease;
+            min-height: 240px; /* 最小の高さを設定して経過時間が入るようにする */
+            display: block; /* 強制的に表示 */
+            opacity: 1; /* 不透明度を100%に設定 */
+            visibility: visible; /* 可視性を確保 */
+        }
+        
+        /* 提供待ちの注文を強調表示 */
+        .order-card[data-status="提供待ち"] {
+            border-left: 5px solid #f39c12;
+            background-color: rgba(255, 248, 225, 0.3);
+            box-shadow: 0 3px 15px rgba(243, 156, 18, 0.2);
+        }
+        
+        .order-card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding-bottom: 10px;
+            gap: 15px;
+        }
+        
+        .order-id {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            flex: 1;
+        }
+        
+        .order-status {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            font-weight: 700;
+            padding: 12px 20px;
+            font-size: 1.4rem;
+            background-color: rgba(52, 152, 219, 0.15);
+            color: #3498db;
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        /* 提供待ちステータスの強調表示 */
+        .order-status.waiting-serve {
+            background-color: rgba(243, 156, 18, 0.15);
+            color: #f39c12;
+            font-weight: 800;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(243, 156, 18, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
+        }
+        
+        .order-status.completed {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+        }
+        
+        .order-status.cancelled {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+        
+        .elapsed-time {
+            position: absolute;
+            top: 70px; /* ヘッダーの下に配置 */
+            right: 20px;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.03);
+            border-radius: 50%; /* 完全な円形に */
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 120px; /* 幅を固定 */
+            height: 120px; /* 高さを同じにして円形に */
+            border: 3px solid rgba(0,0,0,0.03);
+        }
+        
+        .elapsed-time i {
+            color: var(--secondary-color);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .elapsed-time-value {
+            font-size: 1.8rem; /* フォントサイズを約半分に */
+            line-height: 1;
+            display: block;
+        }
+        
+        .elapsed-time-unit {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            display: block;
+            margin-top: 0;
+        }
+        
+        .elapsed-time-urgent {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+        
+        .elapsed-time-warning {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+        }
+        
+        .elapsed-time-cancelled {
+            background-color: rgba(149, 165, 166, 0.1);
+            color: #7f8c8d;
+        }
+        
+        .order-info {
+            margin-bottom: 15px;
+        }
+        
+        .order-info-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .order-info-label {
+            font-weight: 600;
+            color: var(--text-light);
+            width: 120px;
+        }
+        
+        .order-items {
+            background-color: #f9f9fc;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dotted rgba(0, 0, 0, 0.1);
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        
+        .order-item-name {
+            font-weight: 500;
+        }
+        
+        .status-update-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1rem;
+            margin-top: 10px;
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-update-button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .no-orders {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+            font-style: italic;
+            font-size: 1.2rem;
+        }
+        
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+            background-color: #f9f9fc;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 5px;
+        }
+        
+        .table-filter {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .table-filter-button {
+            padding: 8px 15px;
+            border: 2px solid var(--secondary-color);
+            background: none;
+            color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .table-filter-button.active {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .auto-refresh-toggle {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .auto-refresh-toggle label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .auto-refresh-toggle input {
+            margin-right: 8px;
+        }
+        
+        .last-updated {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-left: auto;
+        }
+        
+        .refresh-button {
+            padding: 5px 10px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        .refresh-button:hover {
+            background: var(--primary-hover);
+        }
+        
+        .refresh-button i {
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .auto-refresh-toggle {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .last-updated {
+                margin-left: 0;
+            }
+        }
+        
+        /* 新規注文ハイライト */
+        .new-order-highlight {
+            animation: highlight-pulse 2s ease-in-out;
+        }
+        
+        @keyframes highlight-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); }
+            50% { box-shadow: 0 0 25px 3px rgba(243, 156, 18, 0.7); }
+            100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
+        }
+        
+        /* 通知ボタンホバー効果 */
+        #sound-notification:hover + i.fa-bell {
+            color: #f39c12;
+            transform: scale(1.2);
+        }
+        
+        /* 通知バッジ */
+        #notification-badge {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        #notification-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ホールスタッフ向けリスト</h1>
+        
+        <div class="navigation-bar">
+            <a href="index.html" class="admin-link"><i class="fas fa-home"></i> ホームに戻る</a>
+            <a href="orders.html" class="admin-link"><i class="fas fa-list"></i> 注文一覧</a>
+            <a href="qr_order.html" class="admin-link"><i class="fas fa-qrcode"></i> QRコードで注文</a>
+        </div>
+        
+        <div class="auto-refresh-toggle">
+            <button id="refresh-now" class="refresh-button">
+                <i class="fas fa-sync-alt"></i> 今すぐ更新
+            </button>
+            <label>
+                <input type="checkbox" id="auto-refresh" checked>
+                自動更新 (30秒ごと)
+            </label>
+            <label style="margin-left: 15px;">
+                <input type="checkbox" id="sound-notification" checked>
+                <i class="fas fa-bell"></i> 新規注文通知音
+            </label>
+            <span class="last-updated" id="last-updated">最終更新: たった今</span>
+        </div>
+        
+        <div class="filter-section">
+            <div class="filter-label">テーブルでフィルター:</div>
+            <div class="table-filter" id="table-filter">
+                <button class="table-filter-button active" data-table="all">すべて</button>
+                <!-- テーブルボタンは動的に追加されます -->
+            </div>
+        </div>
+        
+        <div class="orders-container" id="orders-container">
+            <!-- ここに提供待ちの注文が動的に挿入されます -->
+            <div class="no-orders" id="no-orders">
+                <i class="fas fa-clipboard-list"></i> 現在、提供待ちの注文はありません
+            </div>
+        </div>
+    </div>
+    
+    <!-- 経過時間と祝福エフェクトの事前インポート -->
+    <script type="module">
+        // 先にモジュールをインポート
+        import { updateElapsedTimes } from './elapsed_time.js';
+        import { celebrateOrder } from './confetti.js';
+        
+        // グローバルに公開
+        window.updateElapsedTimes = updateElapsedTimes;
+        window.celebrateOrder = celebrateOrder;
+    </script>
+    <script src="navigation.js"></script>
+    
+    <script type="text/javascript">
+        // localStorage関連の問題を検出するためのラッパー関数
+        function safeGetLocalStorage(key) {
+            try {
+                const value = localStorage.getItem(key);
+                return value;
+            } catch (e) {
+                console.error(`safeGetLocalStorage: キー「${key}」の取得エラー:`, e);
+                return null;
+            }
+        }
+        
+        function safeSetLocalStorage(key, value) {
+            try {
+                localStorage.setItem(key, value);
+                return true;
+            } catch (e) {
+                console.error(`safeSetLocalStorage: キー「${key}」の設定エラー:`, e);
+                return false;
+            }
+        }
+        
+        // 新規注文サウンド通知のためのBase64エンコードされたオーディオ
+        const newOrderSound = 'data:audio/mp3;base64,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';
+
+        // ベースとなる音量
+        let audioVolume = 0.7;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // 経過時間の更新関数とエフェクトはグローバル変数から参照
+            // window.updateElapsedTimes が使用可能
+            // window.celebrateOrder が使用可能
+            
+            // 1秒ごとに経過時間を更新（グローバルから参照）
+            if (window.updateElapsedTimes) {
+                window.updateElapsedTimes();
+                setInterval(window.updateElapsedTimes, 1000);
+            } else {
+                console.error('経過時間更新関数が見つかりません');
+            }
+            
+            // DOM要素
+            const ordersContainer = document.getElementById('orders-container');
+            const noOrdersMessage = document.getElementById('no-orders');
+            const tableFilterContainer = document.getElementById('table-filter');
+            const refreshButton = document.getElementById('refresh-now');
+            const autoRefreshCheckbox = document.getElementById('auto-refresh');
+            const soundNotificationCheckbox = document.getElementById('sound-notification');
+            const lastUpdatedElement = document.getElementById('last-updated');
+            
+            // 自動更新タイマー
+            let refreshTimer = null;
+            
+            // カレントフィルター
+            let currentTableFilter = 'all';
+            
+            // 最後に確認した注文のIDを格納する配列
+            let knownOrderIds = [];
+            
+            // 通知音を再生する関数
+            function playNewOrderSound() {
+                if (!soundNotificationCheckbox.checked) return;
+                
+                try {
+                    const audio = new Audio(newOrderSound);
+                    audio.volume = audioVolume;
+                    audio.play().catch(e => console.error("通知音の再生に失敗:", e));
+                    
+                    // 通知バッジを表示
+                    showNotificationBadge();
+                } catch (e) {
+                    console.error("通知音の準備に失敗:", e);
+                }
+            }
+            
+            // 通知バッジを表示する関数
+            function showNotificationBadge() {
+                // 既存のバッジがあれば削除
+                const existingBadge = document.getElementById('notification-badge');
+                if (existingBadge) document.body.removeChild(existingBadge);
+                
+                // 新しいバッジを作成
+                const badge = document.createElement('div');
+                badge.id = 'notification-badge';
+                badge.style.position = 'fixed';
+                badge.style.top = '10px';
+                badge.style.right = '10px';
+                badge.style.backgroundColor = '#f39c12';
+                badge.style.color = 'white';
+                badge.style.padding = '15px 20px';
+                badge.style.borderRadius = '8px';
+                badge.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                badge.style.zIndex = '9999';
+                badge.style.fontWeight = 'bold';
+                badge.style.animation = 'badge-pulse 2s infinite';
+                badge.style.cursor = 'pointer';
+                badge.innerHTML = `<i class="fas fa-bell"></i> 新しい注文があります`;
+                
+                // スタイルを追加
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes badge-pulse {
+                        0% { transform: scale(1); }
+                        50% { transform: scale(1.05); }
+                        100% { transform: scale(1); }
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                // クリックで閉じる
+                badge.addEventListener('click', () => {
+                    document.body.removeChild(badge);
+                });
+                
+                // 自動で閉じる
+                setTimeout(() => {
+                    if (badge.parentNode) {
+                        document.body.removeChild(badge);
+                    }
+                }, 5000);
+                
+                document.body.appendChild(badge);
+            }
+            
+            // 最終更新時間を更新する関数
+            function updateLastUpdated() {
+                const now = new Date();
+                lastUpdatedElement.textContent = `最終更新: ${now.toLocaleTimeString('ja-JP')}`;
+            }
+            
+            // 自動更新の設定
+            function setupAutoRefresh() {
+                // 既存のタイマーをクリア
+                if (refreshTimer) {
+                    clearInterval(refreshTimer);
+                    refreshTimer = null;
+                }
+                
+                // 自動更新が有効な場合は新しいタイマーを設定
+                if (autoRefreshCheckbox.checked) {
+                    refreshTimer = setInterval(() => {
+                        displayWaitingOrders(currentTableFilter);
+                        updateLastUpdated();
+                    }, 30000); // 30秒ごとに更新
+                }
+            }
+            
+            // オーダーデータベース操作関数
+            const OrderDB = {
+                // オーダー一覧の取得
+                getOrders: function() {
+                    const orders = safeGetLocalStorage('orders');
+                    
+                    if (!orders) {
+                        return [];
+                    }
+                    
+                    try {
+                        const parsedOrders = JSON.parse(orders);
+                        
+                        // 初期チェック - 無効なデータが混入していないか確認
+                        const validOrders = parsedOrders.filter(order => {
+                            if (!order || typeof order !== 'object') {
+                                return false;
+                            }
+                            return true;
+                        });
+                        
+                        return validOrders;
+                    } catch (e) {
+                        console.error('OrderDB.getOrders: JSON解析エラー:', e);
+                        return [];
+                    }
+                },
+                
+                // オーダーのステータス更新と履歴の記録
+                updateOrderStatus: function(orderId, newStatus) {
+                    const orders = this.getOrders();
+                    const orderIndex = orders.findIndex(order => order.id === orderId);
+                    if (orderIndex >= 0) {
+                        const now = new Date();
+                        const timestamp = now.toISOString();
+                        const prevStatus = orders[orderIndex].status;
+                        
+                        // ステータス変更履歴の追加
+                        if (!orders[orderIndex].statusHistory) {
+                            orders[orderIndex].statusHistory = [];
+                        }
+                        
+                        // 履歴にステータス変更を追加
+                        orders[orderIndex].statusHistory.push({
+                            from: prevStatus,
+                            to: newStatus,
+                            timestamp: timestamp,
+                            displayTime: now.toLocaleString('ja-JP')
+                        });
+                        
+                        // ステータス更新
+                        orders[orderIndex].status = newStatus;
+                        orders[orderIndex].updatedAt = timestamp;
+                        localStorage.setItem('orders', JSON.stringify(orders));
+                        return true;
+                    }
+                    return false;
+                }
+            };
+            
+            // テーブルフィルターボタンの生成
+            function generateTableFilters() {
+                const orders = OrderDB.getOrders();
+                // 提供待ちのオーダーのみを対象にする
+                const waitingOrders = orders.filter(order => order.status === '提供待ち');
+                const tables = new Set();
+                
+                // 使用されているテーブルのリストを取得
+                waitingOrders.forEach(order => {
+                    if (order.tableId) {
+                        tables.add(order.tableId);
+                    }
+                });
+                
+                // 既存のテーブルボタンをクリア（「すべて」ボタン以外）
+                const existingButtons = tableFilterContainer.querySelectorAll('.table-filter-button:not([data-table="all"])');
+                existingButtons.forEach(button => button.remove());
+                
+                // テーブルごとにボタンを追加
+                tables.forEach(table => {
+                    const button = document.createElement('button');
+                    button.classList.add('table-filter-button');
+                    button.setAttribute('data-table', table);
+                    button.textContent = `テーブル ${table}`;
+                    
+                    button.addEventListener('click', () => {
+                        // アクティブクラスの切り替え
+                        document.querySelectorAll('.table-filter-button').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        // フィルターの適用
+                        currentTableFilter = table;
+                        displayWaitingOrders(currentTableFilter);
+                    });
+                    
+                    tableFilterContainer.appendChild(button);
+                });
+            }
+            
+            // 提供待ちの注文一覧を表示
+            function displayWaitingOrders(tableFilter = 'all') {
+                // 既存のオーダーカードをクリア
+                const orderCards = ordersContainer.querySelectorAll('.order-card');
+                orderCards.forEach(card => card.remove());
+                
+                // オーダーデータの取得
+                const orders = OrderDB.getOrders();
+                
+                // 提供待ちの注文のみをフィルタリング
+                let waitingOrders = orders.filter(order => order.status === '提供待ち');
+                
+                // 新規注文の通知
+                const currentOrderIds = waitingOrders.map(order => order.id);
+                const newOrderIds = currentOrderIds.filter(id => !knownOrderIds.includes(id));
+                
+                // 新規注文がある場合に通知音を再生
+                if (newOrderIds.length > 0 && knownOrderIds.length > 0) {
+                    console.log(`新規注文が ${newOrderIds.length} 件あります:`, newOrderIds);
+                    playNewOrderSound();
+                    
+                    // 新規注文数のカウンターを表示
+                    const newOrderCount = document.createElement('div');
+                    newOrderCount.style.position = 'fixed';
+                    newOrderCount.style.top = '50%';
+                    newOrderCount.style.left = '50%';
+                    newOrderCount.style.transform = 'translate(-50%, -50%)';
+                    newOrderCount.style.fontSize = '5rem';
+                    newOrderCount.style.fontWeight = '900';
+                    newOrderCount.style.color = 'rgba(243, 156, 18, 0.9)';
+                    newOrderCount.style.textShadow = '0 0 15px rgba(243, 156, 18, 0.5)';
+                    newOrderCount.style.zIndex = '10000';
+                    newOrderCount.style.opacity = '0';
+                    newOrderCount.style.animation = 'new-order-count 2s forwards';
+                    newOrderCount.innerHTML = `${newOrderIds.length}件<br>新規注文!`;
+                    
+                    // アニメーションスタイルを追加
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        @keyframes new-order-count {
+                            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+                            70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                    
+                    document.body.appendChild(newOrderCount);
+                    
+                    // 数秒後に要素を削除
+                    setTimeout(() => {
+                        if (newOrderCount.parentNode) {
+                            document.body.removeChild(newOrderCount);
+                        }
+                    }, 2100);
+                }
+                
+                // 既知の注文IDリストを更新
+                knownOrderIds = [...currentOrderIds];
+                
+                // テーブルフィルター
+                if (tableFilter !== 'all') {
+                    waitingOrders = waitingOrders.filter(order => order.tableId === tableFilter);
+                }
+                
+                // データがない場合
+                if (waitingOrders.length === 0) {
+                    noOrdersMessage.style.display = 'block';
+                    if (tableFilter === 'all') {
+                        noOrdersMessage.innerHTML = '<i class="fas fa-clipboard-list"></i> 現在、提供待ちの注文はありません';
+                    } else {
+                        noOrdersMessage.innerHTML = `<i class="fas fa-filter"></i> テーブル ${tableFilter} の提供待ち注文はありません`;
+                    }
+                    return;
+                }
+                
+                // データがある場合
+                noOrdersMessage.style.display = 'none';
+                
+                // オーダーの新しい順にソート
+                waitingOrders.sort((a, b) => {
+                    // createdAtかtimestampのどちらかを使用（両方ある場合はcreatedAtを優先）
+                    const dateA = a.createdAt ? new Date(a.createdAt) : (a.timestamp ? new Date(a.timestamp) : new Date(0));
+                    const dateB = b.createdAt ? new Date(b.createdAt) : (b.timestamp ? new Date(b.timestamp) : new Date(0));
+                    return dateB - dateA;
+                });
+                
+                // 各オーダーをDOMに追加
+                waitingOrders.forEach((order) => {
+                    // データ検証 - order.items が存在するか確認
+                    if (!order.items || !Array.isArray(order.items)) {
+                        return; // この注文をスキップ
+                    }
+                    
+                    const orderCard = document.createElement('div');
+                    orderCard.classList.add('order-card');
+                    orderCard.setAttribute('data-status', order.status);
+                    
+                    // 新規注文の場合はハイライト
+                    if (newOrderIds.includes(order.id)) {
+                        orderCard.classList.add('new-order-highlight');
+                    }
+                    
+                    // 注文日時のフォーマット
+                    const orderTimestamp = order.createdAt || order.timestamp;
+                    const orderDate = new Date(orderTimestamp).toLocaleString('ja-JP', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    try {
+                        // 注文商品一覧のHTML
+                        const orderItemsHtml = order.items.map(item => {
+                            if (!item || typeof item !== 'object') {
+                                return `<div class="order-item"><span class="order-item-name">無効な商品データ</span></div>`;
+                            }
+                            return `
+                                <div class="order-item">
+                                    <span class="order-item-name">${item.name || '不明な商品'}</span>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        // 注文カードにID属性を追加
+                        orderCard.setAttribute('data-id', order.id);
+                        
+                        // 注文カードのHTML
+                        orderCard.innerHTML = `
+                            <div class="order-status waiting-serve">提供待ち</div>
+                            <div class="order-header">
+                                <div class="order-id">${order.id}</div>
+                                <div class="elapsed-time" data-timestamp="${order.createdAt || order.timestamp}" data-order-id="${order.id}">
+                                    <i class="fas fa-clock"></i> 
+                                    <span class="elapsed-time-value">計算中...</span>
+                                    <span class="elapsed-time-unit">秒</span>
+                                </div>
+                            </div>
+                            <div class="order-info">
+                                <div class="order-info-row">
+                                    <div class="order-info-label">テーブル:</div>
+                                    <div><strong>${order.tableId}</strong></div>
+                                </div>
+                                <div class="order-info-row">
+                                    <div class="order-info-label">注文日時:</div>
+                                    <div>${orderDate}</div>
+                                </div>
+                            </div>
+                            <div class="order-items">
+                                <h3>商品リスト:</h3>
+                                ${orderItemsHtml}
+                            </div>
+                            <button class="status-update-button" data-id="${order.id}" data-status="提供済み">
+                                <i class="fas fa-check-circle"></i> 提供完了にする
+                            </button>
+                        `;
+                        
+                        // 提供完了ボタンのイベントリスナー設定
+                        const completeButton = orderCard.querySelector('.status-update-button');
+                        completeButton.addEventListener('click', () => {
+                            const orderId = completeButton.getAttribute('data-id');
+                            
+                            // ステータス更新
+                            if (OrderDB.updateOrderStatus(orderId, '提供済み')) {
+                                // 祝福エフェクトを表示
+                                if (window.celebrateOrder) {
+                                    window.celebrateOrder();
+                                }
+                                
+                                // カードを削除（アニメーションあり）
+                                orderCard.style.transition = 'all 0.5s ease';
+                                orderCard.style.opacity = '0';
+                                orderCard.style.transform = 'translateX(50px)';
+                                setTimeout(() => {
+                                    if (orderCard.parentNode) {
+                                        orderCard.parentNode.removeChild(orderCard);
+                                    }
+                                    
+                                    // 残りのカードをチェック
+                                    checkRemainingCards();
+                                }, 500);
+                                
+                                // フィルターを更新
+                                generateTableFilters();
+                            }
+                        });
+                        
+                        // DOMに追加
+                        ordersContainer.appendChild(orderCard);
+                        
+                    } catch (error) {
+                        console.error(`注文カード生成エラー (ID: ${order.id}):`, error);
+                    }
+                });
+            }
+            
+            // 表示されているカードがなくなったらメッセージを表示
+            function checkRemainingCards() {
+                const remainingCards = ordersContainer.querySelectorAll('.order-card');
+                if (remainingCards.length === 0) {
+                    noOrdersMessage.style.display = 'block';
+                    if (currentTableFilter === 'all') {
+                        noOrdersMessage.innerHTML = '<i class="fas fa-clipboard-list"></i> 現在、提供待ちの注文はありません';
+                    } else {
+                        noOrdersMessage.innerHTML = `<i class="fas fa-filter"></i> テーブル ${currentTableFilter} の提供待ち注文はありません`;
+                    }
+                }
+            }
+            
+            // 「すべて」テーブルボタンのイベントリスナー設定
+            const allTableButton = document.querySelector('.table-filter-button[data-table="all"]');
+            allTableButton.addEventListener('click', () => {
+                document.querySelectorAll('.table-filter-button').forEach(btn => btn.classList.remove('active'));
+                allTableButton.classList.add('active');
+                currentTableFilter = 'all';
+                displayWaitingOrders(currentTableFilter);
+            });
+            
+            // 更新ボタンのイベントリスナー
+            refreshButton.addEventListener('click', () => {
+                displayWaitingOrders(currentTableFilter);
+                updateLastUpdated();
+                
+                // ボタンのアニメーション
+                refreshButton.classList.add('refreshing');
+                setTimeout(() => {
+                    refreshButton.classList.remove('refreshing');
+                }, 500);
+            });
+            
+            // 自動更新チェックボックスのイベントリスナー
+            autoRefreshCheckbox.addEventListener('change', setupAutoRefresh);
+            
+            // 通知音チェックボックスのイベントリスナー
+            soundNotificationCheckbox.addEventListener('change', () => {
+                // 設定をlocalStorageに保存
+                safeSetLocalStorage('hall_staff_sound_notification', 
+                                    soundNotificationCheckbox.checked ? 'true' : 'false');
+                
+                // テスト用の通知音を鳴らす（オンに変更した場合のみ）
+                if (soundNotificationCheckbox.checked) {
+                    // 音量を小さめに設定してテスト
+                    const tempVolume = audioVolume;
+                    audioVolume = 0.3; // テスト用に小さな音量
+                    playNewOrderSound();
+                    // 元の音量に戻す
+                    setTimeout(() => {
+                        audioVolume = tempVolume;
+                    }, 1000);
+                }
+            });
+            
+            // 保存されている通知設定を読み込む
+            const savedSoundSetting = safeGetLocalStorage('hall_staff_sound_notification');
+            if (savedSoundSetting === 'false') {
+                soundNotificationCheckbox.checked = false;
+            }
+            
+            // 初期表示
+            generateTableFilters();
+            displayWaitingOrders();
+            updateLastUpdated();
+            setupAutoRefresh();
+            
+            // テストデータの作成
+            function createTestDataIfNeeded() {
+                // 既存のデータを確認
+                const existingOrders = safeGetLocalStorage('orders');
+                const hasData = existingOrders && existingOrders.length > 10; // 単なる空文字列のチェック
+                
+                if (!hasData) {
+                    // テストデータの作成
+                    const testOrders = [
+                        {
+                            id: 'ORD1234567890',
+                            tableId: 'TABLE01',
+                            status: '提供待ち',
+                            createdAt: new Date().toISOString(),
+                            timestamp: new Date().toISOString(),
+                            items: [
+                                { name: '醤油ラーメン', price: 800, productId: 'P001' },
+                                { name: '餃子', price: 500, productId: 'P007' }
+                            ],
+                            totalAmount: 1300,
+                            statusHistory: [
+                                { from: '', to: '受付', timestamp: new Date(Date.now() - 900000).toISOString(), displayTime: new Date(Date.now() - 900000).toLocaleString('ja-JP') },
+                                { from: '受付', to: '準備中', timestamp: new Date(Date.now() - 600000).toISOString(), displayTime: new Date(Date.now() - 600000).toLocaleString('ja-JP') },
+                                { from: '準備中', to: '調理開始', timestamp: new Date(Date.now() - 400000).toISOString(), displayTime: new Date(Date.now() - 400000).toLocaleString('ja-JP') },
+                                { from: '調理開始', to: '調理完了', timestamp: new Date(Date.now() - 200000).toISOString(), displayTime: new Date(Date.now() - 200000).toLocaleString('ja-JP') },
+                                { from: '調理完了', to: '提供待ち', timestamp: new Date().toISOString(), displayTime: new Date().toLocaleString('ja-JP') }
+                            ]
+                        },
+                        {
+                            id: 'ORD9876543210',
+                            tableId: 'TABLE02',
+                            status: '提供待ち',
+                            createdAt: new Date(Date.now() - 1200000).toISOString(),
+                            timestamp: new Date(Date.now() - 1200000).toISOString(),
+                            items: [
+                                { name: '味噌ラーメン', price: 850, productId: 'P002' },
+                                { name: 'チャーハン', price: 750, productId: 'P005' }
+                            ],
+                            totalAmount: 1600,
+                            statusHistory: [
+                                { from: '', to: '受付', timestamp: new Date(Date.now() - 1200000).toISOString(), displayTime: new Date(Date.now() - 1200000).toLocaleString('ja-JP') },
+                                { from: '受付', to: '準備中', timestamp: new Date(Date.now() - 1000000).toISOString(), displayTime: new Date(Date.now() - 1000000).toLocaleString('ja-JP') },
+                                { from: '準備中', to: '調理開始', timestamp: new Date(Date.now() - 800000).toISOString(), displayTime: new Date(Date.now() - 800000).toLocaleString('ja-JP') },
+                                { from: '調理開始', to: '調理完了', timestamp: new Date(Date.now() - 400000).toISOString(), displayTime: new Date(Date.now() - 400000).toLocaleString('ja-JP') },
+                                { from: '調理完了', to: '提供待ち', timestamp: new Date(Date.now() - 300000).toISOString(), displayTime: new Date(Date.now() - 300000).toLocaleString('ja-JP') }
+                            ]
+                        },
+                        {
+                            id: 'ORD5555555555',
+                            tableId: 'TABLE03',
+                            status: '提供済み',
+                            createdAt: new Date(Date.now() - 1800000).toISOString(),
+                            timestamp: new Date(Date.now() - 1800000).toISOString(),
+                            items: [
+                                { name: '塩ラーメン', price: 800, productId: 'P003' },
+                                { name: 'ビール', price: 500, productId: 'P008' }
+                            ],
+                            totalAmount: 1300,
+                            statusHistory: [
+                                { from: '', to: '受付', timestamp: new Date(Date.now() - 1800000).toISOString(), displayTime: new Date(Date.now() - 1800000).toLocaleString('ja-JP') },
+                                { from: '受付', to: '準備中', timestamp: new Date(Date.now() - 1500000).toISOString(), displayTime: new Date(Date.now() - 1500000).toLocaleString('ja-JP') },
+                                { from: '準備中', to: '調理開始', timestamp: new Date(Date.now() - 1200000).toISOString(), displayTime: new Date(Date.now() - 1200000).toLocaleString('ja-JP') },
+                                { from: '調理開始', to: '調理完了', timestamp: new Date(Date.now() - 900000).toISOString(), displayTime: new Date(Date.now() - 900000).toLocaleString('ja-JP') },
+                                { from: '調理完了', to: '提供待ち', timestamp: new Date(Date.now() - 600000).toISOString(), displayTime: new Date(Date.now() - 600000).toLocaleString('ja-JP') },
+                                { from: '提供待ち', to: '提供済み', timestamp: new Date(Date.now() - 300000).toISOString(), displayTime: new Date(Date.now() - 300000).toLocaleString('ja-JP') }
+                            ]
+                        }
+                    ];
+                    
+                    // テストデータの保存
+                    const dataJson = JSON.stringify(testOrders);
+                    safeSetLocalStorage('orders', dataJson);
+                }
+            }
+            
+            // テストデータの作成を試みる
+            createTestDataIfNeeded();
+        });
+    </script>
+</body>
+</html>

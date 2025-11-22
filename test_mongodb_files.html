@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB接続テストページ集</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        h1 {
+            color: #1a365d;
+            margin-bottom: 30px;
+            font-weight: 700;
+            text-align: center;
+            border-bottom: 2px solid #3182ce;
+            padding-bottom: 15px;
+        }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            background-color: #3182ce;
+            color: white;
+            padding: 15px 20px;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+        
+        .card-content {
+            padding: 20px;
+        }
+        
+        .card-description {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+        
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .button {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 16px;
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        
+        .button:hover {
+            background-color: #2b6cb0;
+        }
+        
+        .button i {
+            margin-right: 8px;
+        }
+        
+        .status-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-header {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #1a365d;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        
+        .status-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8fafc;
+        }
+        
+        .status-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .success {
+            color: #38a169;
+        }
+        
+        .pending {
+            color: #d69e2e;
+        }
+        
+        .error {
+            color: #e53e3e;
+        }
+        
+        .status-text {
+            font-size: 0.95rem;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .card-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MongoDB接続テストページ集</h1>
+        
+        <div class="card-container">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-vial"></i> MongoDB接続テスト
+                </div>
+                <div class="card-content">
+                    <div class="card-description">
+                        MongoDB接続状態をシンプルに確認するためのテストページです。接続状態とアクセス可能なデータベース情報を確認できます。
+                    </div>
+                    <div class="card-actions">
+                        <a href="mongo_test.html" class="button" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> 開く
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-qrcode"></i> QRコード注文 (MongoDB版)
+                </div>
+                <div class="card-content">
+                    <div class="card-description">
+                        QRコードを使った注文システムのMongoDB連携版です。カメラまたはテストモードで注文処理をテストできます。
+                    </div>
+                    <div class="card-actions">
+                        <a href="qr_mongo_order_new.html" class="button" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> 開く
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-shopping-cart"></i> 注文管理アプリ (MongoDB版)
+                </div>
+                <div class="card-content">
+                    <div class="card-description">
+                        注文管理のメインアプリケーションのMongoDB連携版です。商品注文と管理を行えます。
+                    </div>
+                    <div class="card-actions">
+                        <a href="mongo_app_new.js" class="button" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> 開く
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-container">
+            <div class="status-header">
+                MongoDB接続ステータス
+            </div>
+            <div class="status-content" id="status-content">
+                <div class="status-item">
+                    <i class="fas fa-spinner fa-spin status-icon pending"></i>
+                    <span class="status-text">接続ステータスを確認中...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            &copy; 2025 GenbaP - QRコード注文システム MongoDB連携版
+        </div>
+    </div>
+    
+    <script type="module">
+        import { testConnection, getConnectionState } from './mongo_connection.js';
+        
+        const statusContent = document.getElementById('status-content');
+        
+        async function checkConnectionStatus() {
+            try {
+                statusContent.innerHTML = `
+                    <div class="status-item">
+                        <i class="fas fa-spinner fa-spin status-icon pending"></i>
+                        <span class="status-text">MongoDB接続を確認中...</span>
+                    </div>
+                `;
+                
+                const isConnected = await testConnection();
+                const state = getConnectionState();
+                
+                if (isConnected) {
+                    statusContent.innerHTML = `
+                        <div class="status-item">
+                            <i class="fas fa-check-circle status-icon success"></i>
+                            <span class="status-text">MongoDB接続に成功しました</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-database status-icon success"></i>
+                            <span class="status-text">データベース: ${state.config.dbName}</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-server status-icon success"></i>
+                            <span class="status-text">MongoDB URI: ${state.config.uri}</span>
+                        </div>
+                    `;
+                } else {
+                    statusContent.innerHTML = `
+                        <div class="status-item">
+                            <i class="fas fa-times-circle status-icon error"></i>
+                            <span class="status-text">MongoDB接続に失敗しました</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-exclamation-triangle status-icon error"></i>
+                            <span class="status-text">ローカルストレージがフォールバックとして使用されます</span>
+                        </div>
+                        <div class="status-item">
+                            <i class="fas fa-info-circle status-icon"></i>
+                            <span class="status-text">接続設定を確認してください: ${state.config.uri}</span>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                statusContent.innerHTML = `
+                    <div class="status-item">
+                        <i class="fas fa-exclamation-circle status-icon error"></i>
+                        <span class="status-text">接続確認エラー: ${error.message}</span>
+                    </div>
+                `;
+                console.error('接続確認エラー:', error);
+            }
+        }
+        
+        // ページ読み込み時に接続確認を実行
+        document.addEventListener('DOMContentLoaded', () => {
+            checkConnectionStatus();
+        });
+    </script>
+</body>
+</html>

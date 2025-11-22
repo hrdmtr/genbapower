@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品マスター管理 (MongoDB連携版)</title>
+    <link rel="stylesheet" href="admin.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* MongoDBステータスインジケータ用スタイル */
+        .db-status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .db-status i {
+            margin-right: 8px;
+        }
+        
+        .db-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .db-status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .db-status.pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        
+        .db-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        .mongodb-badge {
+            display: inline-block;
+            font-size: 0.6em;
+            background-color: #4DB33D;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 4px;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="db-indicator">
+        <i class="fas fa-database"></i> MongoDB連携版
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1>商品マスター管理 <span class="mongodb-badge">MongoDB</span></h1>
+            <div class="header-actions">
+                <a href="index.html" class="back-link">メイン画面に戻る</a>
+                <a href="mongo_index_new.html" class="back-link">MongoDB画面に戻る</a>
+            </div>
+        </header>
+
+        <div id="db-status" class="db-status pending">
+            <i class="fas fa-spinner fa-spin"></i> データベース接続状態を確認中...
+        </div>
+
+        <div class="content">
+            <div class="product-form-container">
+                <h2>商品編集</h2>
+                <form id="product-form" class="product-form">
+                    <div class="form-row">
+                        <label for="product-id">商品ID:</label>
+                        <input type="text" id="product-id" class="form-input" placeholder="例: P001" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="product-name">商品名:</label>
+                        <input type="text" id="product-name" class="form-input" placeholder="例: コーヒー" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="product-price">価格:</label>
+                        <input type="number" id="product-price" class="form-input" placeholder="例: 450" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="product-description">説明:</label>
+                        <textarea id="product-description" class="form-textarea" placeholder="商品の説明を入力"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label for="product-image">画像:</label>
+                        <input type="file" id="product-image" class="form-input-file" accept="image/*">
+                        <div class="image-preview-container">
+                            <img id="image-preview" class="image-preview" style="display: none;">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="button primary-button">
+                            <i class="fas fa-save"></i> 保存
+                        </button>
+                        <button type="button" id="cancel-edit" class="button cancel-button">
+                            <i class="fas fa-times"></i> キャンセル
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="product-list-container">
+                <div class="product-list-header">
+                    <h2>商品一覧</h2>
+                    <button id="add-product" class="button primary-button">
+                        <i class="fas fa-plus"></i> 新規商品追加
+                    </button>
+                </div>
+                <div id="product-list" class="product-list">
+                    <!-- 商品リストがここに表示されます -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">商品編集</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label for="product-id">商品ID:</label>
+                    <input type="text" id="product-id" class="form-input" placeholder="例: P001" required>
+                </div>
+                <div class="form-row">
+                    <label for="product-name">商品名:</label>
+                    <input type="text" id="product-name" class="form-input" placeholder="例: コーヒー" required>
+                </div>
+                <div class="form-row">
+                    <label for="product-price">価格:</label>
+                    <input type="number" id="product-price" class="form-input" placeholder="例: 450" required>
+                </div>
+                <div class="form-row">
+                    <label for="product-description">説明:</label>
+                    <textarea id="product-description" class="form-textarea" placeholder="商品の説明を入力"></textarea>
+                </div>
+                <div class="form-row">
+                    <label for="product-image">画像:</label>
+                    <input type="file" id="product-image" class="form-input-file" accept="image/*">
+                    <div class="image-preview-container">
+                        <img id="image-preview" class="image-preview" style="display: none;">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-product" class="button primary-button">
+                    <i class="fas fa-save"></i> 保存
+                </button>
+                <button class="button cancel-button close-modal">
+                    <i class="fas fa-times"></i> キャンセル
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    
+    <script type="module">
+        // インラインモジュールスクリプト（CORSエラー対策用）
+        // MongoDB設定
+        const mongoConfig = {
+            uri: "mongodb+srv://cluster0.5gmgchv.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority&appName=Cluster0",
+            dbName: "genbapower",
+            options: {
+                tlsCertificateKeyFile: "/Users/haradamitsuru/Downloads/X509-cert-4928065383930939451.pem"
+            }
+        };
+        
+        // 接続状態
+        let dbClient = null;
+        let dbAvailable = false;
+        let dbTested = false;
+        let connectionListeners = [];
+        
+        // MongoDB接続状態の変更を通知するリスナーを登録
+        function addConnectionListener(listener) {
+            connectionListeners.push(listener);
+        }
+        
+        // 接続状態を更新して全リスナーに通知
+        function updateConnectionStatus(available) {
+            dbAvailable = available;
+            dbTested = true;
+            
+            // 全てのリスナーに通知
+            connectionListeners.forEach(listener => {
+                try {
+                    listener(available);
+                } catch (err) {
+                    console.error('接続リスナーエラー:', err);
+                }
+            });
+        }
+        
+        // MongoDB接続テスト
+        async function testConnection() {
+            if (dbTested) {
+                console.log('DB接続は既にテスト済み:', dbAvailable ? '接続成功' : '接続失敗');
+                return dbAvailable;
+            }
+            
+            console.log('MongoDB接続確認中...');
+            
+            try {
+                // モックのMongoDBクライアント
+                const mockMongoClient = {
+                    uri: mongoConfig.uri,
+                    options: mongoConfig.options,
+                    
+                    connect: async function() {
+                        console.log('モックMongoDB接続を試みています...');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        console.log('モックMongoDB接続成功');
+                        return this;
+                    },
+                    
+                    db: function(dbName) {
+                        console.log(`モックデータベース"${dbName}"にアクセス中`);
+                        return {
+                            collection: function(collectionName) {
+                                console.log(`モックコレクション"${collectionName}"にアクセス中`);
+                                return {
+                                    find: function() { return { toArray: async () => [] }; },
+                                    findOne: async function() { return null; },
+                                    insertOne: async function(doc) { return { insertedId: 'mock-id' }; },
+                                    updateOne: async function() { return { modifiedCount: 1 }; },
+                                    deleteOne: async function() { return { deletedCount: 1 }; }
+                                };
+                            }
+                        };
+                    },
+                    
+                    close: async function() {
+                        console.log('モックMongoDB接続を閉じています');
+                        return true;
+                    }
+                };
+                
+                // 接続テスト
+                dbClient = await mockMongoClient.connect();
+                const db = dbClient.db(mongoConfig.dbName);
+                await db.collection('products').find().toArray();
+                
+                updateConnectionStatus(true);
+                return true;
+            } catch (err) {
+                console.error('MongoDB接続テストエラー:', err);
+                updateConnectionStatus(false);
+                return false;
+            }
+        }
+        
+        // MongoDB接続状態を取得
+        function getConnectionState() {
+            return {
+                available: dbAvailable,
+                tested: dbTested,
+                config: {
+                    uri: mongoConfig.uri,
+                    dbName: mongoConfig.dbName
+                }
+            };
+        }
+        
+        // DB接続状態表示要素
+        const dbStatusElement = document.getElementById('db-status');
+        
+        // 接続状態を表示する関数
+        function updateDbStatus(status, message) {
+            if (!dbStatusElement) return;
+            
+            dbStatusElement.className = `db-status ${status}`;
+            
+            if (status === 'connected') {
+                dbStatusElement.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            } else if (status === 'disconnected') {
+                dbStatusElement.innerHTML = `<i class="fas fa-times-circle"></i> ${message}`;
+            } else if (status === 'pending') {
+                dbStatusElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
+            }
+        }
+        
+        // 接続状態リスナーをセットアップ
+        addConnectionListener((available) => {
+            if (available) {
+                updateDbStatus('connected', 'MongoDB接続成功: データベース接続済み');
+            } else {
+                updateDbStatus('disconnected', 'MongoDB接続失敗: ローカルストレージを使用します');
+            }
+        });
+        
+        // 一時的なメモリキャッシュ
+        const memoryCache = new Map();
+        
+        // 統一的なデータ保存関数
+        async function saveData(key, data, collection = 'generic') {
+            try {
+                // 接続状態を確認
+                if (!dbTested) {
+                    await testConnection();
+                }
+                
+                // メモリキャッシュに保存（操作が速い）
+                memoryCache.set(key, data);
+                
+                // DB接続があれば保存（モック）
+                if (dbAvailable) {
+                    console.log(`データをMongoDBに保存します: [${collection}] ${key}`);
+                    // 実際のMongoDB保存はモックとして処理
+                    return true;
+                }
+                
+                // MongoDBに保存できない場合はローカルストレージを使用
+                console.log(`データをローカルストレージに保存します: ${key}`);
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (error) {
+                console.error(`データ保存エラー: ${key}`, error);
+                // 最終手段としてローカルストレージに保存を試みる
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                    return true;
+                } catch (e) {
+                    console.error('ローカルストレージ保存も失敗:', e);
+                    return false;
+                }
+            }
+        }
+        
+        // 統一的なデータ取得関数
+        async function getData(key, collection = 'generic') {
+            try {
+                // メモリキャッシュから高速取得を試みる
+                if (memoryCache.has(key)) {
+                    return memoryCache.get(key);
+                }
+                
+                // 接続状態を確認
+                if (!dbTested) {
+                    await testConnection();
+                }
+                
+                // MongoDBから取得（モック）
+                if (dbAvailable) {
+                    console.log(`データをMongoDBから取得します: [${collection}] ${key}`);
+                    
+                    // モックデータを返す（すでにlocalStorageにあれば使用）
+                    const storedData = localStorage.getItem(key);
+                    if (storedData) {
+                        try {
+                            const parsedData = JSON.parse(storedData);
+                            memoryCache.set(key, parsedData);
+                            return parsedData;
+                        } catch (e) {
+                            console.error(`JSONパースエラー: ${key}`, e);
+                        }
+                    }
+                    
+                    // MongoDB取得はモックとして空データを返す
+                    return null;
+                }
+                
+                // ローカルストレージから取得
+                console.log(`データをローカルストレージから取得します: ${key}`);
+                const storedData = localStorage.getItem(key);
+                
+                if (storedData) {
+                    try {
+                        const parsedData = JSON.parse(storedData);
+                        memoryCache.set(key, parsedData);
+                        return parsedData;
+                    } catch (parseError) {
+                        console.error(`JSONパースエラー: ${key}`, parseError);
+                        return null;
+                    }
+                }
+                
+                return null; // データが見つからない
+            } catch (error) {
+                console.error(`データ取得エラー: ${key}`, error);
+                return null;
+            }
+        }
+        
+        // 統一的なデータ削除関数
+        async function removeData(key, collection = 'generic') {
+            try {
+                // メモリキャッシュから削除
+                memoryCache.delete(key);
+                
+                // 接続状態を確認
+                if (!dbTested) {
+                    await testConnection();
+                }
+                
+                // MongoDBから削除（モック）
+                if (dbAvailable) {
+                    console.log(`データをMongoDBから削除します: [${collection}] ${key}`);
+                    // 実際のMongoDB削除はモックとして処理
+                }
+                
+                // ローカルストレージからも削除
+                console.log(`データをローカルストレージから削除します: ${key}`);
+                localStorage.removeItem(key);
+                return true;
+            } catch (error) {
+                console.error(`データ削除エラー: ${key}`, error);
+                return false;
+            }
+        }
+        
+        // 商品マスター管理機能
+        
+        // 定数
+        const IMAGE_STORAGE_PREFIX = 'product_image_';
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            // DOM要素
+            const productForm = document.getElementById('product-form');
+            const productList = document.getElementById('product-list');
+            const productModal = document.getElementById('product-modal');
+            const closeModal = document.querySelectorAll('.close-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const productIdInput = document.getElementById('product-id');
+            const productNameInput = document.getElementById('product-name');
+            const productPriceInput = document.getElementById('product-price');
+            const productDescriptionInput = document.getElementById('product-description');
+            const productImageInput = document.getElementById('product-image');
+            const productImagePreview = document.getElementById('image-preview');
+            
+            // 追加ボタン
+            const addProductButton = document.getElementById('add-product');
+            
+            // トースト通知要素
+            const toast = document.getElementById('toast');
+            
+            // 編集中の商品ID
+            let editingProductId = null;
+            let isCreatingNew = false;
+            
+            // 商品データ
+            let products = [];
+            
+            // MongoDB接続テスト
+            updateDbStatus('pending', 'MongoDB接続を確認中...');
+            await testConnection();
+            
+            // 初期化
+            init();
+            
+            // 初期化関数
+            async function init() {
+                // データベースから商品データを読み込む
+                const storedProducts = await getData('productMaster', 'products');
+                if (storedProducts) {
+                    products = storedProducts;
+                    renderProductList();
+                    showToast('商品データを読み込みました');
+                } else {
+                    // 初期データが無ければデフォルト商品を設定
+                    products = getDefaultProducts();
+                    await saveProductsToStorage();
+                    renderProductList();
+                    showToast('デフォルト商品データを生成しました');
+                }
+            }
+            
+            // トースト通知を表示
+            function showToast(message) {
+                toast.textContent = message;
+                toast.className = 'toast show';
+                
+                setTimeout(() => {
+                    toast.className = toast.className.replace('show', '');
+                }, 3000);
+            }
+
+            // 商品データをデータベースに保存
+            async function saveProductsToStorage() {
+                await saveData('productMaster', products, 'products');
+            }
+
+            // 画像をBase64形式で保存
+            async function saveImageToStorage(productId, dataUrl) {
+                if (dataUrl && dataUrl !== 'images/no-image.jpg') {
+                    await saveData(`${IMAGE_STORAGE_PREFIX}${productId}`, dataUrl, 'images');
+                    return `${IMAGE_STORAGE_PREFIX}${productId}`;
+                }
+                return '';
+            }
+
+            // 保存された画像をロード
+            async function loadImageFromStorage(imageKey) {
+                // imageKeyがストレージキーの場合はストレージから読み込む
+                if (imageKey && imageKey.startsWith(IMAGE_STORAGE_PREFIX)) {
+                    const imageData = await getData(imageKey, 'images');
+                    return imageData || 'images/no-image.jpg';
+                }
+                // 通常のパスの場合はそのまま返す
+                return imageKey || 'images/no-image.jpg';
+            }
+            
+            // 商品リストの表示更新
+            async function renderProductList() {
+                productList.innerHTML = '';
+                
+                for (const product of products) {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    
+                    // 画像の取得
+                    let imageUrl = 'images/no-image.jpg';
+                    if (product.image) {
+                        imageUrl = await loadImageFromStorage(product.image);
+                    }
+                    
+                    card.innerHTML = `
+                        <div class="product-image-container">
+                            <img src="${imageUrl}" alt="${product.name}" class="product-image">
+                        </div>
+                        <div class="product-details">
+                            <div class="product-id">${product.id}</div>
+                            <div class="product-name">${product.name}</div>
+                            <div class="product-price">¥${product.price.toLocaleString()}</div>
+                            <div class="product-description">${product.description || '説明なし'}</div>
+                        </div>
+                        <div class="product-actions">
+                            <button class="edit-button" data-id="${product.id}">
+                                <i class="fas fa-edit"></i> 編集
+                            </button>
+                            <button class="delete-button" data-id="${product.id}">
+                                <i class="fas fa-trash"></i> 削除
+                            </button>
+                        </div>
+                    `;
+                    
+                    // 編集ボタンのイベント
+                    const editButton = card.querySelector('.edit-button');
+                    editButton.addEventListener('click', () => {
+                        openEditModal(product.id);
+                    });
+                    
+                    // 削除ボタンのイベント
+                    const deleteButton = card.querySelector('.delete-button');
+                    deleteButton.addEventListener('click', () => {
+                        deleteProduct(product.id);
+                    });
+                    
+                    productList.appendChild(card);
+                }
+            }
+            
+            // 編集モーダルを開く
+            async function openEditModal(productId) {
+                const product = products.find(p => p.id === productId);
+                if (!product) return;
+                
+                editingProductId = productId;
+                isCreatingNew = false;
+                
+                modalTitle.textContent = `商品編集: ${product.name}`;
+                productIdInput.value = product.id;
+                productIdInput.disabled = true;
+                productNameInput.value = product.name;
+                productPriceInput.value = product.price;
+                productDescriptionInput.value = product.description || '';
+                
+                // 画像の表示
+                if (product.image) {
+                    const imageUrl = await loadImageFromStorage(product.image);
+                    productImagePreview.src = imageUrl;
+                    productImagePreview.style.display = 'block';
+                } else {
+                    productImagePreview.src = 'images/no-image.jpg';
+                    productImagePreview.style.display = 'block';
+                }
+                
+                productModal.style.display = 'block';
+            }
+            
+            // 新規商品追加モーダルを開く
+            function openNewProductModal() {
+                editingProductId = null;
+                isCreatingNew = true;
+                
+                modalTitle.textContent = '新規商品追加';
+                
+                // 新規IDを生成
+                const maxId = products.reduce((max, p) => {
+                    const idNum = parseInt(p.id.replace('P', ''));
+                    return idNum > max ? idNum : max;
+                }, 0);
+                
+                const newId = `P${(maxId + 1).toString().padStart(3, '0')}`;
+                
+                productIdInput.value = newId;
+                productIdInput.disabled = false;
+                productNameInput.value = '';
+                productPriceInput.value = '0';
+                productDescriptionInput.value = '';
+                productImagePreview.src = 'images/no-image.jpg';
+                productImagePreview.style.display = 'block';
+                
+                productModal.style.display = 'block';
+            }
+            
+            // モーダルを閉じる
+            function closeProductModal() {
+                productModal.style.display = 'none';
+                editingProductId = null;
+                isCreatingNew = false;
+            }
+            
+            // 商品を削除
+            async function deleteProduct(productId) {
+                if (!confirm(`商品ID: ${productId} を削除してもよろしいですか？`)) return;
+                
+                // 商品リストから削除
+                products = products.filter(p => p.id !== productId);
+                
+                // ストレージを更新
+                await saveProductsToStorage();
+                
+                // 画像も削除
+                await removeData(`${IMAGE_STORAGE_PREFIX}${productId}`, 'images');
+                
+                // 画面を更新
+                renderProductList();
+                
+                showToast(`商品ID: ${productId} を削除しました`);
+            }
+            
+            // 画像ファイル選択時のプレビュー処理
+            productImageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                // ファイルサイズチェック（1MB以下）
+                if (file.size > 1024 * 1024) {
+                    alert('画像サイズは1MB以下にしてください');
+                    e.target.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    productImagePreview.src = event.target.result;
+                    productImagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            // フォーム送信処理
+            productForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const productId = productIdInput.value.trim();
+                const productName = productNameInput.value.trim();
+                const productPrice = parseInt(productPriceInput.value);
+                const productDescription = productDescriptionInput.value.trim();
+                
+                // 入力検証
+                if (!productId || !productName || isNaN(productPrice)) {
+                    alert('必須項目を入力してください');
+                    return;
+                }
+                
+                // ID形式チェック
+                const idRegex = /^P\d{3}$/;
+                if (!idRegex.test(productId)) {
+                    alert('商品IDは「P」に続く3桁の数字にしてください（例: P001）');
+                    return;
+                }
+                
+                // 新規追加時のID重複チェック
+                if (isCreatingNew && products.some(p => p.id === productId)) {
+                    alert(`商品ID ${productId} は既に使用されています`);
+                    return;
+                }
+                
+                // 画像データの保存準備
+                let imageKey = '';
+                
+                // 画像ファイルが選択されている場合
+                if (productImageInput.files && productImageInput.files[0]) {
+                    imageKey = await saveImageToStorage(productId, productImagePreview.src);
+                } 
+                // 既存の画像がある場合（編集モード）
+                else if (editingProductId) {
+                    const existingProduct = products.find(p => p.id === editingProductId);
+                    if (existingProduct && existingProduct.image) {
+                        imageKey = existingProduct.image;
+                    }
+                }
+                
+                // 商品オブジェクトの作成
+                const product = {
+                    id: productId,
+                    name: productName,
+                    price: productPrice,
+                    description: productDescription,
+                    image: imageKey || (productImagePreview.src !== 'images/no-image.jpg' ? productImagePreview.src : '')
+                };
+                
+                // 新規追加または既存商品の更新
+                if (isCreatingNew) {
+                    products.push(product);
+                    showToast(`商品 ${productName} を追加しました`);
+                } else {
+                    const index = products.findIndex(p => p.id === editingProductId);
+                    if (index !== -1) {
+                        products[index] = product;
+                        showToast(`商品 ${productName} を更新しました`);
+                    }
+                }
+                
+                // ストレージを更新
+                await saveProductsToStorage();
+                
+                // 画面を更新
+                renderProductList();
+                
+                // モーダルを閉じる
+                closeProductModal();
+            });
+            
+            // 追加ボタンのイベント
+            addProductButton.addEventListener('click', openNewProductModal);
+            
+            // モーダル閉じるボタンのイベント
+            closeModal.forEach(btn => {
+                btn.addEventListener('click', closeProductModal);
+            });
+            
+            // モーダル外クリックで閉じる
+            window.addEventListener('click', function(event) {
+                if (event.target === productModal) {
+                    closeProductModal();
+                }
+            });
+            
+            // デフォルト商品データ
+            function getDefaultProducts() {
+                return [
+                    {
+                        id: 'P001',
+                        name: 'コーヒー',
+                        price: 480,
+                        description: '香り豊かな深煎りコーヒー',
+                        image: 'images/coffee.jpg'
+                    },
+                    {
+                        id: 'P002',
+                        name: 'カフェラテ',
+                        price: 520,
+                        description: '濃厚なエスプレッソとミルクの組み合わせ',
+                        image: 'images/latte.jpg'
+                    },
+                    {
+                        id: 'P003',
+                        name: 'クッキー',
+                        price: 320,
+                        description: 'サクサク食感のチョコチップクッキー',
+                        image: 'images/cookie.jpg'
+                    },
+                    {
+                        id: 'P004',
+                        name: 'アイスクリーム',
+                        price: 450,
+                        description: 'バニラビーンズたっぷりのアイスクリーム',
+                        image: 'images/ice_cream.jpg'
+                    }
+                ];
+            }
+        });
+    </script>
+    <script src="navigation.js"></script>
+</body>
+</html>

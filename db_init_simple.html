@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB データ初期化（シンプル版）</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #4DB33D;
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+        
+        .db-status {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        
+        .db-status i {
+            margin-right: 10px;
+        }
+        
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        
+        button {
+            background-color: #4DB33D;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+            display: block;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #3b9a2f;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        #log {
+            border: 1px solid #ddd;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            background-color: #f5f5f5;
+            font-family: monospace;
+            border-radius: 4px;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            border-radius: 4px;
+        }
+        
+        .info {
+            background-color: #e7f3fe;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        
+        .links {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .links a {
+            color: #4DB33D;
+            margin: 0 10px;
+            text-decoration: none;
+        }
+        
+        .links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MongoDB データ初期化（シンプル版）</h1>
+        
+        <div id="db-status" class="db-status pending">
+            <i class="fas fa-spinner fa-spin"></i> MongoDB接続を確認中...
+        </div>
+        
+        <button id="init-button" disabled>商品マスターデータを初期化</button>
+        <button id="view-button" disabled>現在のデータを確認</button>
+        
+        <div id="log"></div>
+        
+        <div class="links">
+            <a href="index.html">メイン画面に戻る</a>
+            <a href="admin.html">商品マスター管理に戻る</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+        const dbStatus = document.getElementById('db-status');
+        const initButton = document.getElementById('init-button');
+        const viewButton = document.getElementById('view-button');
+        const logContainer = document.getElementById('log');
+        
+        // ローカルストレージをシミュレートする簡易関数（実際のアプリではdb_storage.jsを使用）
+        function saveToLocalStorage(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (error) {
+                console.error('ローカルストレージ保存エラー:', error);
+                return false;
+            }
+        }
+        
+        function getFromLocalStorage(key) {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            } catch (error) {
+                console.error('ローカルストレージ読み込みエラー:', error);
+                return null;
+            }
+        }
+        
+        // ログ出力関数
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // 接続状態の更新
+        function updateConnectionStatus(status, message) {
+            dbStatus.className = `db-status ${status}`;
+            
+            if (status === 'connected') {
+                dbStatus.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+                initButton.disabled = false;
+                viewButton.disabled = false;
+            } else if (status === 'disconnected') {
+                dbStatus.innerHTML = `<i class="fas fa-times-circle"></i> ${message}`;
+                initButton.disabled = false; // ローカルストレージ使用時は有効
+                viewButton.disabled = false;
+            } else {
+                dbStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
+                initButton.disabled = true;
+                viewButton.disabled = true;
+            }
+        }
+        
+        // 商品マスターの初期データ
+        const defaultProductMaster = {
+            "P001": {
+                name: "醤油ラーメン",
+                price: 800,
+                image: "images/shoyu_ramen.jpg",
+                description: "当店自慢の醤油ベーススープに特製の中太麺が絡む一品"
+            },
+            "P002": {
+                name: "味噌ラーメン",
+                price: 850,
+                image: "images/miso_ramen.jpg",
+                description: "北海道産の味噌を使用した濃厚スープと太麺の組み合わせ"
+            },
+            "P003": {
+                name: "塩ラーメン",
+                price: 800,
+                image: "images/shio_ramen.jpg",
+                description: "あっさりとした塩味のスープに細麺が特徴の一杯"
+            },
+            "P004": {
+                name: "とんこつラーメン",
+                price: 900,
+                image: "images/tonkotsu_ramen.jpg",
+                description: "豚骨を長時間煮込んだ濃厚なスープに細麺を合わせた博多風"
+            },
+            "P005": {
+                name: "つけ麺",
+                price: 950,
+                image: "images/tsukemen.jpg",
+                description: "濃厚なスープに極太麺をつけて食べる人気メニュー"
+            },
+            "P006": {
+                name: "チャーシュー丼",
+                price: 400,
+                image: "images/chashu_don.jpg",
+                description: "特製チャーシューをご飯の上にたっぷりと"
+            },
+            "P007": {
+                name: "餃子（6個）",
+                price: 350,
+                image: "images/gyoza.jpg",
+                description: "手作りの皮に野菜と豚肉をたっぷり包んだ一品"
+            },
+            "P008": {
+                name: "ビール",
+                price: 500,
+                image: "images/beer.jpg",
+                description: "ラーメンとの相性抜群の冷えたビール"
+            },
+            "P009": {
+                name: "ライス",
+                price: 200,
+                image: "images/rice.jpg",
+                description: "ラーメンのお供に欠かせない白米"
+            },
+            "P010": {
+                name: "唐揚げ",
+                price: 450,
+                image: "images/karaage.jpg",
+                description: "外はカリッと中はジューシーな特製唐揚げ"
+            },
+            "P011": {
+                name: "杏仁豆腐",
+                price: 300,
+                image: "images/annin_tofu.jpg",
+                description: "まろやかな口当たりの杏仁豆腐"
+            },
+            "P012": {
+                name: "ウーロン茶",
+                price: 250,
+                image: "images/oolong_tea.jpg",
+                description: "さっぱりとした後味のウーロン茶"
+            }
+        };
+        
+        // 初期化機能
+        async function initializeData() {
+            log('商品マスターの初期化を開始します...', 'info');
+            initButton.disabled = true;
+            
+            try {
+                // 既存データの確認
+                const existingData = getFromLocalStorage('productMaster');
+                if (existingData) {
+                    log(`既存の商品データが見つかりました: ${Object.keys(existingData).length}件`, 'info');
+                    
+                    if (!confirm('既存の商品データを上書きしますか？')) {
+                        log('初期化処理をキャンセルしました', 'info');
+                        initButton.disabled = false;
+                        return;
+                    }
+                }
+                
+                // データの保存
+                const success = saveToLocalStorage('productMaster', defaultProductMaster);
+                
+                if (success) {
+                    log('商品マスターの初期化が完了しました！', 'success');
+                    log(`登録した商品数: ${Object.keys(defaultProductMaster).length}件`, 'success');
+                    
+                    // 各商品の情報を表示
+                    for (const [id, product] of Object.entries(defaultProductMaster)) {
+                        log(`${id}: ${product.name} - ¥${product.price}`, 'info');
+                    }
+                } else {
+                    log('商品マスターの初期化に失敗しました', 'error');
+                }
+            } catch (error) {
+                log(`エラーが発生しました: ${error.message}`, 'error');
+                console.error('初期化エラー:', error);
+            } finally {
+                initButton.disabled = false;
+            }
+        }
+        
+        // データ確認機能
+        function viewData() {
+            log('現在の商品マスターデータを確認します...', 'info');
+            viewButton.disabled = true;
+            
+            try {
+                const data = getFromLocalStorage('productMaster');
+                
+                if (data && Object.keys(data).length > 0) {
+                    log(`商品データあり: ${Object.keys(data).length}件`, 'success');
+                    
+                    // 商品一覧を表示
+                    for (const [id, product] of Object.entries(data)) {
+                        log(`${id}: ${product.name} - ¥${product.price} - ${product.description}`, 'info');
+                    }
+                } else {
+                    log('商品データが見つかりませんでした', 'error');
+                }
+            } catch (error) {
+                log(`エラーが発生しました: ${error.message}`, 'error');
+            } finally {
+                viewButton.disabled = false;
+            }
+        }
+        
+        // イベントリスナー
+        initButton.addEventListener('click', initializeData);
+        viewButton.addEventListener('click', viewData);
+        
+        // 初期化時の処理
+        function initialize() {
+            log('初期化中...', 'info');
+            
+            // ローカルストレージ対応版なので、すぐに接続OK状態にする
+            setTimeout(() => {
+                log('ローカルストレージモードで実行します（MongoDB接続は使用しません）', 'info');
+                updateConnectionStatus('connected', 'ローカルストレージモード（MongoDB未使用）');
+                log('初期化が完了しました。ボタンを押して操作を行ってください。', 'success');
+            }, 1000);
+        }
+        
+        // ページ読み込み時に初期化実行
+        initialize();
+        }); // DOMContentLoadedイベントリスナーの終了
+        
+    </script>
+    <script src="navigation.js"></script>
+</body>
+</html>

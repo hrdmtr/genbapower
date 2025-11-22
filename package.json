@@ -1,0 +1,39 @@
+{
+  "dependencies": {
+    "mongodb": "^6.16.0",
+    "pino": "^10.1.0",
+    "pino-pretty": "^13.1.2"
+  },
+  "name": "genbapower",
+  "version": "1.0.0",
+  "description": "現場のちからを集結するオーダーシステム",
+  "type": "module",
+  "main": "app.js",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.11"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.cjs",
+    "dev": "nodemon server.cjs",
+    "dev:watch": "nodemon --watch . --ext js,json,html,css --ignore node_modules/ server.cjs",
+    "test-db": "node db_test.js",
+    "seed-db": "node db_seed.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hrdmtr/genbapower.git"
+  },
+  "keywords": [
+    "order",
+    "restaurant",
+    "qrcode"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hrdmtr/genbapower/issues"
+  },
+  "homepage": "https://github.com/hrdmtr/genbapower#readme"
+}

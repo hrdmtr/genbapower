@@ -1,11 +1,16 @@
 // 経過時間の更新関数
 function updateElapsedTimes() {
+    console.log('経過時間の更新を実行中...');
     const elapsedTimeElements = document.querySelectorAll('.elapsed-time');
+    console.log(`経過時間要素の数: ${elapsedTimeElements.length}`);
     const now = new Date();
     
     elapsedTimeElements.forEach(element => {
         const timestamp = element.getAttribute('data-timestamp');
-        if (!timestamp) return;
+        if (!timestamp) {
+            console.warn('タイムスタンプが見つかりません:', element);
+            return;
+        }
         
         const orderTime = new Date(timestamp);
         const elapsedMs = now - orderTime;
@@ -18,8 +23,8 @@ function updateElapsedTimes() {
         
         // 親要素からステータスを取得
         const orderCard = element.closest('.order-card');
-        const orderStatus = orderCard.querySelector('.order-status')?.textContent;
-        const orderId = orderCard.getAttribute('data-order-id');
+        const orderStatus = orderCard ? orderCard.querySelector('.order-status')?.textContent : null;
+        const orderId = element.getAttribute('data-order-id'); // 重要: elapsed-time要素自体からorder-idを取得
         
         // 提供済みの場合は最終ステータス変更までの時間を表示
         if (orderStatus === '提供済み') {
@@ -30,7 +35,8 @@ function updateElapsedTimes() {
             
             if (orderData && orderData.statusHistory && orderData.statusHistory.length > 0) {
                 // 最初と最後のステータス変更を取得
-                const startTime = new Date(orderData.timestamp);
+                const startTimestamp = orderData.createdAt || orderData.timestamp;
+                const startTime = new Date(startTimestamp);
                 const lastStatusChange = orderData.statusHistory
                     .filter(history => history.to === '提供済み')[0];
                 
@@ -90,4 +96,25 @@ function updateElapsedTimes() {
 }
 
 // エクスポート
+// orders.html読み込み時に経過時間更新が設定されていることを確認
+function initializeElapsedTime() {
+    console.log('elapsed_time.js: 初期化完了');
+    console.log('orders.htmlに存在する.elapsed-time要素を検出：', document.querySelectorAll('.elapsed-time').length);
+    
+    // 最初の更新を行う
+    updateElapsedTimes();
+    
+    // デバッグ用：初期ロード時に要素を確認
+    setTimeout(() => {
+        const elements = document.querySelectorAll('.elapsed-time');
+        console.log(`[Debug] 遅延チェック: ${elements.length}個の経過時間要素を検出`);
+        if (elements.length === 0) {
+            console.warn('[警告] 経過時間要素が見つかりません。注文リストが空か、DOMが更新中の可能性があります。');
+        }
+    }, 1000);
+}
+
+// 初期化を自動実行
+document.addEventListener('DOMContentLoaded', initializeElapsedTime);
+
 export { updateElapsedTimes };

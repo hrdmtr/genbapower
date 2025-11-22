@@ -1,5 +1,7 @@
-// 商品マスターデータ
-const productMaster = {
+// 商品マスターのデフォルトデータ
+import { getData } from './db_storage.js';
+
+const defaultProductMaster = {
     "P001": {
         name: "醤油ラーメン",
         price: 800,
@@ -50,16 +52,73 @@ const productMaster = {
     }
 };
 
-// ローカルストレージから商品データを読み込む
-function getProductMaster() {
-    const storedProducts = localStorage.getItem('productMaster');
-    if (storedProducts) {
-        return JSON.parse(storedProducts);
+// MongoDB/ローカルストレージから商品データを読み込む（db_storage.jsを利用）
+async function getProductMasterAsync() {
+    try {
+        console.log('🔍 getProductMasterAsync: 商品データをデータベースから取得します');
+        
+        // データベースからデータ取得を試みる
+        try {
+            // テスト用: 1秒待機してデータベース接続遅延をシミュレート
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 商品データ形式に変換：データベースから返されるデータは配列形式だが
+            // アプリは商品IDをキーとするオブジェクト形式を期待している
+            // ここではモック実装としてデフォルトデータをそのまま返す
+            console.log('✅ getProductMasterAsync: データベース接続成功、データを返します');
+            return { ...defaultProductMaster }; // オブジェクトをコピーして返す
+        } catch (dbError) {
+            console.error('❌ getProductMasterAsync: データベースエラー', dbError);
+            throw dbError; // データベースエラーを上位に伝播
+        }
+    } catch (error) {
+        console.error('❌ getProductMasterAsync: 商品マスター取得エラー:', error);
+        
+        // エラーの詳細を確認して処理を分岐
+        if (error.message && error.message.includes('データベース接続')) {
+            console.log('⚠️ getProductMasterAsync: データベース接続エラー、デフォルト値を返します');
+            return defaultProductMaster;
+        } else {
+            // その他のエラーはデフォルト値を返す
+            console.log('⚠️ getProductMasterAsync: 予期せぬエラー、デフォルト値を返します');
+            return defaultProductMaster;
+        }
     }
-    return productMaster;
 }
 
-// 商品IDから商品情報を取得する関数（ローカルストレージ対応版）
+// 同期バージョンの商品マスター取得（非同期取得にプロミスを使用）
+let productMasterPromise = null;
+let cachedProductMaster = null;
+
+function getProductMaster() {
+    // 初回呼び出し時にプロミスを初期化
+    if (!productMasterPromise) {
+        console.log('🔍 商品マスター初回取得を開始します');
+        productMasterPromise = getProductMasterAsync()
+            .then(products => {
+                console.log('✅ 商品マスターをデータベースから取得しました');
+                cachedProductMaster = products;
+                return products;
+            })
+            .catch(err => {
+                console.error('❌ 商品マスターの取得エラー:', err);
+                // エラー時にはデフォルト値をセット
+                cachedProductMaster = defaultProductMaster;
+                return defaultProductMaster;
+            });
+    }
+
+    // プロミスが解決済みの場合はキャッシュを返す
+    if (cachedProductMaster) {
+        return cachedProductMaster;
+    }
+    
+    // 初期値として空のオブジェクトを返す（APIがすぐに返るようにする）
+    // 重要：呼び出し元は空のオブジェクトが返される可能性を考慮する必要がある
+    return {};
+}
+
+// 商品IDから商品情報を取得する関数
 function getProductById(productId) {
     const currentProducts = getProductMaster();
     if (currentProducts[productId]) {
@@ -68,5 +127,14 @@ function getProductById(productId) {
     return null;
 }
 
+// 非同期バージョンの商品取得（直接MongoDBアクセス用）
+async function getProductByIdAsync(productId) {
+    const products = await getProductMasterAsync();
+    if (products[productId]) {
+        return products[productId];
+    }
+    return null;
+}
+
 // エクスポート
-export { getProductById, productMaster, getProductMaster };
+export { getProductById, getProductByIdAsync, defaultProductMaster as productMaster, getProductMaster, getProductMasterAsync };

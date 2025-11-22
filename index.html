@@ -17,12 +17,7 @@
         <div class="connection-panel">
             <button id="connect-button" class="primary-button"><i class="fas fa-plug"></i> QRコードリーダーに接続</button>
             <div id="connection-status" class="status-indicator">未接続</div>
-            <div class="admin-links">
-                <a href="admin.html" class="admin-link"><i class="fas fa-cog"></i> 商品管理画面</a>
-                <a href="orders.html" class="admin-link"><i class="fas fa-list-alt"></i> 注文一覧</a>
-                <a href="analytics.html" class="admin-link"><i class="fas fa-chart-line"></i> 注文分析</a>
-                <a href="time_analysis.html" class="admin-link"><i class="fas fa-stopwatch"></i> 処理時間分析</a>
-            </div>
+            <!-- 上部タブナビゲーションを削除しました - ハンバーガーメニューのみを使用 -->
         </div>
         
         <div class="order-status-panel">
@@ -31,6 +26,7 @@
             <div class="order-actions">
                 <button id="reset-order" class="reset-button"><i class="fas fa-undo"></i> 注文リセット</button>
                 <button id="send-order" class="send-button"><i class="fas fa-paper-plane"></i> 注文送信</button>
+                <button id="debug-storage" class="reset-button" style="background-color: #6c757d;"><i class="fas fa-bug"></i> ストレージ確認</button>
             </div>
         </div>
         
@@ -95,5 +91,584 @@
     
     <script src="products.js" type="module"></script>
     <script src="app.js" type="module"></script>
+    <script src="navigation.js"></script>
+    
+    <!-- カスタムログ表示スタイル -->
+    <style>
+        .custom-log-entry {
+            padding: 5px;
+            margin: 3px 0;
+            border-left: 3px solid #4CAF50;
+            font-family: monospace;
+        }
+        .custom-log-info {
+            border-left-color: #2196F3;
+            background-color: rgba(33, 150, 243, 0.05);
+        }
+        .custom-log-error {
+            border-left-color: #f44336;
+            background-color: rgba(244, 67, 54, 0.05);
+            color: #f44336;
+        }
+        .custom-log-success {
+            border-left-color: #4CAF50;
+            background-color: rgba(76, 175, 80, 0.05);
+            color: #4CAF50;
+        }
+        .custom-log-heading {
+            font-weight: bold;
+            background-color: #f5f5f5;
+            padding: 8px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            border-left: 5px solid #3f51b5;
+            color: #3f51b5;
+        }
+        .custom-log-subheading {
+            font-weight: bold;
+            margin-top: 8px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            color: #666;
+        }
+        .custom-log-timestamp {
+            color: #999;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+        #log-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #fff;
+            font-size: 14px;
+        }
+        
+        /* 注文状況のスタイル */
+        .current-order-header {
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .current-order-header h3 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .no-items, .no-table {
+            color: #666;
+            font-style: italic;
+            padding: 10px 0;
+        }
+        .active-orders-section {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .active-orders-section h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .active-orders-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .active-order-item {
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            border-left: 3px solid #4CAF50;
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .order-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .order-id {
+            font-weight: bold;
+            color: #333;
+        }
+        .order-table {
+            color: #666;
+        }
+        .order-date {
+            color: #999;
+            font-size: 0.9em;
+        }
+        .order-items-count {
+            color: #666;
+        }
+        .order-amount {
+            font-weight: bold;
+            color: #333;
+        }
+        .order-status {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            color: white;
+        }
+        .status-received {
+            background-color: #2196F3; /* 青 */
+        }
+        .status-preparing {
+            background-color: #FF9800; /* オレンジ */
+        }
+        .status-ready {
+            background-color: #4CAF50; /* 緑 */
+        }
+        .status-serving {
+            background-color: #9C27B0; /* 紫 */
+        }
+    </style>
+
+    <!-- スタンドアロンのデバッグ機能（モジュールの外部に配置） -->
+    <script>
+        // 保存時刻の追跡用
+        let lastStorageSave = {
+            currentOrder: null,
+            currentOrder_backup: null,
+            orders: null
+        };
+        
+        // ストレージの変更を監視
+        window.addEventListener('storage', function(e) {
+            console.log('ストレージ変更検知:', e.key);
+            if (e.key === 'currentOrder' || e.key === 'currentOrder_backup' || e.key === 'orders') {
+                lastStorageSave[e.key] = new Date();
+            }
+        });
+        
+        // ページがロードされた後にデバッグボタンにイベントリスナーを追加
+        document.addEventListener('DOMContentLoaded', function() {
+            const debugButton = document.getElementById('debug-storage');
+            const logContainer = document.getElementById('log-container');
+            
+            if (debugButton) {
+                console.log('デバッグボタンにスタンドアロンイベントリスナーを追加');
+                
+                debugButton.addEventListener('click', function() {
+                    console.log('デバッグボタンがクリックされました（スタンドアロン）');
+                    console.log('logContainer存在確認:', logContainer ? 'あり' : 'なし');
+                    
+                    if (logContainer) {
+                        console.log('ログコンテナのクリア開始');
+                        // ログコンテナをクリア
+                        logContainer.innerHTML = '';
+                        console.log('ログコンテナのクリア完了');
+                        
+                        // consoleにログコンテナの情報を詳細に表示
+                        console.log('ログコンテナ詳細:', {
+                            tagName: logContainer.tagName,
+                            id: logContainer.id,
+                            className: logContainer.className,
+                            innerHTML: logContainer.innerHTML,
+                            style: {
+                                display: window.getComputedStyle(logContainer).display,
+                                visibility: window.getComputedStyle(logContainer).visibility,
+                                height: window.getComputedStyle(logContainer).height,
+                                width: window.getComputedStyle(logContainer).width
+                            }
+                        });
+                        
+                        // 時刻付きでログエントリを追加する関数
+                        function addLogEntry(message, type) {
+                            console.log(`ログ追加(${type}): ${message}`);
+                            const entry = document.createElement('div');
+                            entry.className = `custom-log-entry custom-log-${type || 'info'}`;
+                            
+                            const timestamp = document.createElement('span');
+                            timestamp.className = 'custom-log-timestamp';
+                            timestamp.textContent = new Date().toLocaleTimeString();
+                            
+                            const content = document.createElement('span');
+                            content.textContent = message;
+                            
+                            entry.appendChild(timestamp);
+                            entry.appendChild(content);
+                            logContainer.appendChild(entry);
+                            
+                            // 追加後に再度コンソールログを出力
+                            console.log('ログエントリ追加後のHTML:', logContainer.innerHTML);
+                            
+                            return entry;
+                        }
+                        
+                        // 見出しを追加
+                        function addHeading(text) {
+                            console.log(`見出し追加: ${text}`);
+                            const heading = document.createElement('div');
+                            heading.className = 'custom-log-heading';
+                            heading.textContent = text;
+                            logContainer.appendChild(heading);
+                            return heading;
+                        }
+                        
+                        // サブ見出しを追加
+                        function addSubHeading(text) {
+                            console.log(`サブ見出し追加: ${text}`);
+                            const subheading = document.createElement('div');
+                            subheading.className = 'custom-log-subheading';
+                            subheading.textContent = text;
+                            logContainer.appendChild(subheading);
+                            return subheading;
+                        }
+                        
+                        try {
+                            console.log('データ処理開始！');
+                            addHeading('📊 ストレージデータ確認');
+                            addLogEntry('データの読み込みを開始します', 'info');
+                            
+                            // localStorage から直接データを取得
+                            console.log('localStorage からデータ取得開始');
+                            const keys = ['currentOrder', 'currentOrder_backup', 'currentOrder_check', 'orders'];
+                            const storageData = {};
+                            
+                            console.log('localStorage keys:', Object.keys(localStorage));
+                            
+                            for (let i = 0; i < localStorage.length; i++) {
+                                const key = localStorage.key(i);
+                                console.log(`localStorage[${i}]: ${key}`);
+                            }
+                            
+                            keys.forEach(key => {
+                                console.log(`-------- キー: ${key} のデータ処理開始 --------`);
+                                try {
+                                    console.log(`localStorage.getItem('${key}') 実行...`);
+                                    const rawData = localStorage.getItem(key);
+                                    console.log(`${key} の生データ:`, rawData ? (rawData.length > 100 ? rawData.substring(0, 100) + '...' : rawData) : 'null');
+                                    
+                                    let parsedData = null;
+                                    if (rawData) {
+                                        console.log(`${key} のJSONパース開始`);
+                                        parsedData = JSON.parse(rawData);
+                                        console.log(`${key} のパース成功:`, parsedData);
+                                    }
+                                    
+                                    storageData[key] = {
+                                        exists: !!rawData,
+                                        raw: rawData,
+                                        parsed: parsedData,
+                                        lastSaved: lastStorageSave[key] || null
+                                    };
+                                    console.log(`${key} のデータ処理完了:`, storageData[key].exists ? '存在します' : '存在しません');
+                                } catch (e) {
+                                    console.error(`${key} のデータ処理中にエラー:`, e);
+                                    storageData[key] = { 
+                                        exists: false, 
+                                        error: e.message 
+                                    };
+                                }
+                                console.log(`-------- キー: ${key} のデータ処理完了 --------`);
+                            });
+                            
+                            console.log('全キーの処理完了、データ表示開始');
+                            
+                            // 現在の注文データを表示
+                            addSubHeading('【現在の注文データ】');
+                            if (storageData.currentOrder.exists) {
+                                const data = storageData.currentOrder.parsed;
+                                const savedTime = storageData.currentOrder.lastSaved;
+                                
+                                if (savedTime) {
+                                    addLogEntry(`最終保存: ${savedTime.toLocaleString()}`, 'info');
+                                }
+                                
+                                addLogEntry(`テーブル番号: ${data.tableId || 'なし'}`, 'info');
+                                addLogEntry(`商品数: ${data.items ? data.items.length : 0}アイテム`, 'info');
+                                
+                                if (data.items && data.items.length > 0) {
+                                    addLogEntry('登録商品一覧:', 'info');
+                                    data.items.forEach((item, index) => {
+                                        addLogEntry(`  ${index+1}. ${item.name} - ¥${item.price.toLocaleString()}`, 'info');
+                                    });
+                                    
+                                    // 合計金額も表示
+                                    const total = data.items.reduce((sum, item) => sum + item.price, 0);
+                                    addLogEntry(`合計金額: ¥${total.toLocaleString()}`, 'success');
+                                } else {
+                                    addLogEntry('登録商品なし', 'info');
+                                }
+                            } else {
+                                addLogEntry('現在の注文データがありません', 'error');
+                            }
+                            
+                            // バックアップデータを表示
+                            addSubHeading('【バックアップデータ】');
+                            if (storageData.currentOrder_backup.exists) {
+                                const data = storageData.currentOrder_backup.parsed;
+                                const savedTime = storageData.currentOrder_backup.lastSaved;
+                                
+                                if (savedTime) {
+                                    addLogEntry(`最終保存: ${savedTime.toLocaleString()}`, 'info');
+                                }
+                                
+                                addLogEntry(`テーブル番号: ${data.tableId || 'なし'}`, 'info');
+                                addLogEntry(`商品数: ${data.items ? data.items.length : 0}アイテム`, 'info');
+                            } else {
+                                addLogEntry('バックアップデータがありません', 'error');
+                            }
+                            
+                            // 保存済み注文一覧を表示
+                            addSubHeading('【保存済み注文一覧】');
+                            if (storageData.orders.exists) {
+                                const orders = storageData.orders.parsed;
+                                addLogEntry(`登録済み注文数: ${orders.length}件`, 'success');
+                                
+                                if (orders.length > 0) {
+                                    // 最新5件の注文を表示
+                                    addLogEntry('最新の注文:', 'info');
+                                    const recentOrders = orders.slice(-5);
+                                    
+                                    recentOrders.forEach((order, index) => {
+                                        const date = new Date(order.createdAt || order.timestamp).toLocaleString();
+                                        const items = order.items ? order.items.length : 0;
+                                        const total = order.totalAmount ? `¥${order.totalAmount.toLocaleString()}` : '不明';
+                                        
+                                        addLogEntry(
+                                            `[${date}] ID:${order.id.slice(-6)}, ` + 
+                                            `テーブル:${order.tableId}, 商品数:${items}, ` + 
+                                            `金額:${total}, 状態:${order.status}`, 
+                                            'info'
+                                        );
+                                    });
+                                }
+                            } else {
+                                addLogEntry('注文データがありません', 'error');
+                            }
+                            
+                            // 同期状態のチェック
+                            addSubHeading('【データの同期状態】');
+                            // currentOrderとbackupのデータが一致するか確認
+                            if (storageData.currentOrder.exists && storageData.currentOrder_backup.exists) {
+                                const mainData = JSON.stringify(storageData.currentOrder.parsed);
+                                const backupData = JSON.stringify(storageData.currentOrder_backup.parsed);
+                                
+                                if (mainData === backupData) {
+                                    addLogEntry('メインデータとバックアップは同期しています ✓', 'success');
+                                } else {
+                                    addLogEntry('メインデータとバックアップが一致していません ⚠', 'error');
+                                }
+                            }
+                            
+                            // スクロールを一番下に
+                            logContainer.scrollTop = logContainer.scrollHeight;
+                            
+                            addLogEntry('データ読み込み完了', 'success');
+                        } catch (error) {
+                            console.error('デバッグ処理中にエラーが発生:', error);
+                            addLogEntry(`エラーが発生しました: ${error.message}`, 'error');
+                        }
+                    } else {
+                        console.error('ログコンテナが見つかりません');
+                    }
+                });
+                
+                // 初期状態でデータを表示
+                console.log('自動クリックのタイマーを設定...');
+                setTimeout(() => {
+                    console.log('自動クリック実行！');
+                    // ページ読み込み完了後に自動的にクリック
+                    debugButton.click();
+                    
+                    // UI表示がされていない場合、再度データ表示を強制的に試みる
+                    console.log('注文状態の表示を確認します...');
+                    setTimeout(() => {
+                        const orderStatusElement = document.getElementById('order-status');
+                        if (orderStatusElement) {
+                            const currentContent = orderStatusElement.innerHTML;
+                            console.log('現在の注文状態表示:', currentContent);
+                            
+                            // まだテーブルが選択されていないメッセージが表示されていて、
+                            // かつlocalStorageには注文データがある場合は強制的に再読み込み
+                            if ((currentContent === 'テーブルが選択されていません' || !orderStatusElement.classList.contains('has-table')) 
+                                && localStorage.getItem('currentOrder')) {
+                                console.log('注文データが表示されていません。強制的に再表示を試みます...');
+                                
+                                // app.jsのグローバルスコープで、注文復元関数を呼び出す
+                                if (typeof window.restoreCurrentOrderFromGlobal === 'function') {
+                                    console.log('グローバルの復元関数を呼び出します');
+                                    window.restoreCurrentOrderFromGlobal();
+                                } else if (typeof restoreCurrentOrder === 'function') {
+                                    console.log('restoreCurrentOrder関数を呼び出します');
+                                    restoreCurrentOrder();
+                                } else {
+                                    console.log('グローバルスコープにrestoreCurrentOrder関数がありません');
+                                    // 直接状態を更新する（緊急時の対応策）
+                                    try {
+                                        let statusHtml = '';
+                                        
+                                        // 1. 現在の注文データの復元
+                                        const savedData = JSON.parse(localStorage.getItem('currentOrder'));
+                                        console.log('保存データを直接表示:', savedData);
+                                        
+                                        if (savedData && savedData.tableId) {
+                                            // ヘッダー表示
+                                            statusHtml += `<div class="current-order-header">
+                                                <h3>現在の注文内容</h3>
+                                                <div>テーブル: ${savedData.tableId} - 商品数: ${savedData.items ? savedData.items.length : 0}</div>
+                                            </div>`;
+                                            
+                                            orderStatusElement.classList.add('has-table');
+                                            
+                                            // テーブル選択ラジオボタンを更新
+                                            const tableRadio = document.querySelector(`input[name="table"][value="${savedData.tableId}"]`);
+                                            if (tableRadio) {
+                                                tableRadio.checked = true;
+                                            }
+                                            
+                                            // 商品情報がある場合は表示
+                                            if (savedData.items && savedData.items.length > 0) {
+                                                const itemsHtml = savedData.items.map((item, index) => {
+                                                    return `
+                                                        <div class="order-item">
+                                                            <span>${index + 1}. ${item.name} - ¥${item.price ? item.price.toLocaleString() : 0}</span>
+                                                        </div>
+                                                    `;
+                                                }).join('');
+                                                
+                                                // 合計金額計算
+                                                const total = savedData.items.reduce((sum, item) => sum + (item.price || 0), 0);
+                                                
+                                                statusHtml += `
+                                                    <div class="order-items-list">
+                                                        ${itemsHtml}
+                                                        <div class="order-total">
+                                                            合計: ¥${total.toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            } else {
+                                                statusHtml += '<div class="no-items">注文商品がありません</div>';
+                                            }
+                                        } else {
+                                            statusHtml = '<div class="no-table">テーブルが選択されていません</div>';
+                                        }
+                                        
+                                        // 2. 注文履歴データの表示
+                                        try {
+                                            const ordersData = localStorage.getItem('orders');
+                                            if (ordersData) {
+                                                const orders = JSON.parse(ordersData);
+                                                
+                                                // 進行中の注文のみをフィルタリング
+                                                const activeOrders = orders.filter(order => 
+                                                    order.status !== 'キャンセル' && order.status !== '提供済み'
+                                                );
+                                                
+                                                if (activeOrders.length > 0) {
+                                                    console.log(`進行中の注文が ${activeOrders.length} 件見つかりました（緊急復元）`);
+                                                    
+                                                    // 進行中の注文セクション
+                                                    statusHtml += `
+                                                        <div class="active-orders-section">
+                                                            <h3>進行中の注文 (${activeOrders.length}件)</h3>
+                                                            <div class="active-orders-list">
+                                                    `;
+                                                    
+                                                    // 各注文の詳細
+                                                    activeOrders.forEach(order => {
+                                                        const orderDate = new Date(order.createdAt || order.timestamp).toLocaleString('ja-JP', {
+                                                            month: 'numeric',
+                                                            day: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        });
+                                                        
+                                                        // ステータスクラス
+                                                        let statusClass = '';
+                                                        switch(order.status) {
+                                                            case '受付': statusClass = 'status-received'; break;
+                                                            case '準備中': statusClass = 'status-preparing'; break;
+                                                            case '準備完了': statusClass = 'status-ready'; break;
+                                                            case '配膳中': statusClass = 'status-serving'; break;
+                                                        }
+                                                        
+                                                        statusHtml += `
+                                                            <div class="active-order-item">
+                                                                <div class="order-header">
+                                                                    <span class="order-id">${order.id.substring(0, 8)}</span>
+                                                                    <span class="order-table">テーブル ${order.tableId}</span>
+                                                                    <span class="order-date">${orderDate}</span>
+                                                                </div>
+                                                                <div class="order-detail">
+                                                                    <span class="order-items-count">商品: ${order.items.length}点</span>
+                                                                    <span class="order-amount">¥${order.totalAmount ? order.totalAmount.toLocaleString() : '不明'}</span>
+                                                                    <span class="order-status ${statusClass}">${order.status}</span>
+                                                                </div>
+                                                            </div>
+                                                        `;
+                                                    });
+                                                    
+                                                    statusHtml += `
+                                                            </div>
+                                                        </div>
+                                                    `;
+                                                } else {
+                                                    console.log('進行中の注文はありません（緊急復元）');
+                                                }
+                                            } else {
+                                                console.log('注文履歴データが見つかりません（緊急復元）');
+                                            }
+                                        } catch (e) {
+                                            console.error('注文履歴の処理中にエラー:', e);
+                                        }
+                                        
+                                        // HTMLの設定
+                                        orderStatusElement.innerHTML = statusHtml;
+                                        console.log('緊急復元完了！');
+                                    } catch (e) {
+                                        console.error('緊急データ表示中にエラー:', e);
+                                    }
+                                }
+                            }
+                        }
+                    }, 500); // 500ms後に確認
+                }, 1000);
+                
+                // 直接処理を実行する緊急対策
+                console.log('緊急対策: コンソールにlocalStorageの内容を直接出力');
+                try {
+                    console.log('===== localStorage 直接チェック =====');
+                    
+                    // すべてのlocalStorage項目を表示
+                    console.log('- すべての保存キー:');
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        const value = localStorage.getItem(key);
+                        console.log(`  ${key}: ${value ? (value.length > 50 ? value.substring(0, 50) + '...' : value) : 'null'}`);
+                    }
+                    
+                    // 特定のキーを詳細に表示
+                    const currentOrderData = localStorage.getItem('currentOrder');
+                    console.log('- currentOrder:', currentOrderData ? 
+                        JSON.parse(currentOrderData) : 'データなし');
+                    
+                    const ordersData = localStorage.getItem('orders');
+                    if (ordersData) {
+                        const orders = JSON.parse(ordersData);
+                        console.log(`- orders: ${orders.length}件の注文データ`);
+                        if (orders.length > 0) {
+                            console.log('  最新の注文:', orders[orders.length - 1]);
+                        }
+                    } else {
+                        console.log('- orders: データなし');
+                    }
+                } catch (e) {
+                    console.error('緊急出力中にエラー:', e);
+                }
+            } else {
+                console.error('デバッグボタンが見つかりません');
+            }
+        });
+    </script>
 </body>
 </html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコードリーダー テスト</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .test-area {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .input-display {
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            font-family: monospace;
+            position: relative;
+        }
+        .input-display::before {
+            content: "QRコード入力:";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 12px;
+            color: #777;
+        }
+        .log-container {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #fff;
+            font-family: monospace;
+            position: relative;
+        }
+        .log-container::before {
+            content: "読み取りログ:";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 12px;
+            color: #777;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-entry .timestamp {
+            color: #888;
+            margin-right: 10px;
+            font-size: 0.8em;
+        }
+        .log-entry .content {
+            color: #333;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            display: none;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #388E3C;
+        }
+        .warning {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QRコードリーダー テスト</h1>
+        
+        <div class="test-area">
+            <div class="input-display" id="input-display">QRコードをスキャンしてください...</div>
+            
+            <div class="log-container" id="log-container"></div>
+            
+            <div class="status" id="status-message">ステータスメッセージがここに表示されます</div>
+            
+            <div class="button-container">
+                <button id="clear-log">ログをクリア</button>
+            </div>
+            
+            <div class="warning">
+                <p><strong>注意:</strong> このページは、キーボードエミュレーションモード（KBW）で動作するQRコードリーダー向けに設計されています。QRコードを読み取ると、テキストボックスがフォーカスされていなくても入力として認識されます。</p>
+                <p>デバイス名: DM13 USB POS KBW (Newland Auto-ID)</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputDisplay = document.getElementById('input-display');
+            const logContainer = document.getElementById('log-container');
+            const statusMessage = document.getElementById('status-message');
+            const clearLogButton = document.getElementById('clear-log');
+            
+            let currentInput = '';
+            let inputBuffer = '';
+            let inputTimeout;
+            
+            // キー入力を監視
+            document.addEventListener('keydown', function(event) {
+                // エンターキーが押された場合は入力完了とみなす
+                if (event.key === 'Enter') {
+                    processInput();
+                    return;
+                }
+                
+                // 入力中のタイムアウトをリセット
+                clearTimeout(inputTimeout);
+                
+                // 表示可能な文字の場合、バッファに追加
+                if (event.key.length === 1) {
+                    inputBuffer += event.key;
+                    inputDisplay.textContent = inputBuffer;
+                    
+                    // 一定時間入力がなければ処理
+                    inputTimeout = setTimeout(processInput, 500);
+                }
+            });
+            
+            // 入力を処理する
+            function processInput() {
+                if (inputBuffer.trim() === '') return;
+                
+                // 処理する入力がある場合
+                const now = new Date();
+                const timestamp = now.toLocaleTimeString('ja-JP');
+                
+                // ログに追加
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `
+                    <span class="timestamp">[${timestamp}]</span>
+                    <span class="content">${inputBuffer}</span>
+                `;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                // 状態メッセージを表示
+                statusMessage.textContent = `読み取り成功: ${inputBuffer}`;
+                statusMessage.style.display = 'block';
+                
+                // 一時的に背景色を変えてフィードバックを与える
+                inputDisplay.style.backgroundColor = '#e8f5e9';
+                setTimeout(() => {
+                    inputDisplay.style.backgroundColor = '#fff';
+                }, 500);
+                
+                // バッファをクリア
+                inputBuffer = '';
+                inputDisplay.textContent = 'QRコードをスキャンしてください...';
+                
+                // 3秒後にステータスメッセージを非表示にする
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 3000);
+            }
+            
+            // ログクリアボタンのイベント
+            clearLogButton.addEventListener('click', function() {
+                logContainer.innerHTML = '';
+                statusMessage.style.display = 'none';
+            });
+        });
+    </script>
+    <script src="navigation.js"></script>
+</body>
+</html>

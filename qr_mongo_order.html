@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコードで注文 (MongoDB連携版) - QRコードリーダー注文システム</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .reader-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .qr-input-display {
+            height: 50px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            background-color: #f8f9fc;
+            font-family: monospace;
+            position: relative;
+            display: flex;
+            align-items: center;
+            font-size: 1.2rem;
+            transition: background-color 0.3s;
+        }
+        
+        .qr-input-display i {
+            margin-right: 15px;
+            color: var(--primary-color);
+        }
+        
+        .log-container {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            padding: 15px;
+            background-color: #f8f9fc;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 4px;
+            animation: fadeIn 0.3s ease-out;
+            border-left: 3px solid transparent;
+        }
+        
+        .log-entry .timestamp {
+            color: var(--text-light);
+            margin-right: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry.success {
+            background-color: rgba(46, 204, 113, 0.1);
+            border-left-color: var(--success-color);
+        }
+        
+        .log-entry.info {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left-color: var(--info-color);
+        }
+        
+        .log-entry.error {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left-color: var(--danger-color);
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            display: none;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(46, 125, 50, 0.2);
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .control-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .primary-button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .primary-button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+        }
+        
+        .secondary-button {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        
+        .secondary-button:hover {
+            background-color: #e0e0e0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--info-color);
+            border-radius: 4px;
+        }
+        
+        .info-box h3 {
+            margin-top: 0;
+            color: var(--info-color);
+            font-size: 1.1rem;
+        }
+        
+        .order-preview {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .order-preview h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid rgba(67, 97, 238, 0.2);
+            padding-bottom: 10px;
+        }
+        
+        .product-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            background-color: #f9f9fc;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .product-info img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 15px;
+        }
+        
+        .product-details h4 {
+            margin: 0 0 5px;
+            color: var(--text-color);
+        }
+        
+        .product-price {
+            font-weight: bold;
+            color: var(--accent-color);
+            font-size: 1.1rem;
+        }
+        
+        .product-description {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .table-info {
+            background-color: rgba(76, 175, 80, 0.1);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 3px solid var(--success-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .table-info i {
+            margin-right: 10px;
+            color: var(--success-color);
+        }
+        
+        .order-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        /* QRコードスキャナー用のスタイル */
+        #qr-scanner-container {
+            display: none;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        #qr-scanner {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            border: 2px solid #4361ee;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
+            position: relative;
+        }
+
+        #qr-scanner video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 10;
+            border: 50px solid rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        .scanner-viewport {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            right: 50px;
+            bottom: 50px;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+        }
+
+        .scanner-corners {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: #4361ee;
+            border-style: solid;
+            border-width: 4px;
+        }
+
+        .corner-top-left {
+            top: 50px;
+            left: 50px;
+            border-right: none;
+            border-bottom: none;
+            border-top-left-radius: 10px;
+        }
+
+        .corner-top-right {
+            top: 50px;
+            right: 50px;
+            border-left: none;
+            border-bottom: none;
+            border-top-right-radius: 10px;
+        }
+
+        .corner-bottom-left {
+            bottom: 50px;
+            left: 50px;
+            border-right: none;
+            border-top: none;
+            border-bottom-left-radius: 10px;
+        }
+
+        .corner-bottom-right {
+            bottom: 50px;
+            right: 50px;
+            border-left: none;
+            border-top: none;
+            border-bottom-right-radius: 10px;
+        }
+
+        .scanner-laser {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            right: 50px;
+            height: 2px;
+            background: rgba(67, 97, 238, 0.7);
+            box-shadow: 0 0 4px rgba(67, 97, 238, 0.5);
+            z-index: 11;
+            animation: laser-scan 2s infinite;
+        }
+
+        @keyframes laser-scan {
+            0% { top: 50px; }
+            50% { top: calc(100% - 50px - 2px); }
+            100% { top: 50px; }
+        }
+
+        .scanner-hint {
+            text-align: center;
+            padding: 15px;
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .permission-error {
+            display: none;
+            padding: 15px;
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .permission-error h3 {
+            margin-top: 0;
+            color: #f44336;
+        }
+
+        .permission-error p {
+            margin-bottom: 0;
+        }
+
+        /* カメラ選択用のスタイル */
+        .camera-selector {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        .camera-selector select {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: white;
+            font-size: 0.9rem;
+            max-width: 100%;
+            width: 100%;
+        }
+        
+        /* DB接続ステータス表示 */
+        .db-status {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            background-color: #f5f5f5;
+            border-left: 3px solid #888;
+        }
+        
+        .db-status i {
+            margin-right: 10px;
+        }
+        
+        .db-status.connected {
+            background-color: rgba(46, 204, 113, 0.1);
+            border-left-color: var(--success-color);
+        }
+        
+        .db-status.connected i {
+            color: var(--success-color);
+        }
+        
+        .db-status.disconnected {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left-color: var(--danger-color);
+        }
+        
+        .db-status.disconnected i {
+            color: var(--danger-color);
+        }
+        
+        .db-status.pending {
+            background-color: rgba(243, 156, 18, 0.1);
+            border-left-color: #f39c12;
+        }
+        
+        .db-status.pending i {
+            color: #f39c12;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QRコードで注文 (MongoDB連携版)</h1>
+        
+        <div class="navigation-bar">
+            <a href="index.html" class="admin-link"><i class="fas fa-home"></i> ホームに戻る</a>
+            <a href="orders.html" class="admin-link"><i class="fas fa-list-alt"></i> 注文一覧</a>
+            <a href="hall_staff.html" class="admin-link"><i class="fas fa-concierge-bell"></i> ホールスタッフ画面</a>
+        </div>
+        
+        <div class="reader-container">
+            <h2><i class="fas fa-qrcode"></i> QRコードリーダー</h2>
+            
+            <!-- DB接続ステータス表示 -->
+            <div id="db-status" class="db-status pending">
+                <i class="fas fa-spinner fa-spin"></i> データベース接続状態を確認中...
+            </div>
+            
+            <div class="qr-input-display" id="qr-input-display">
+                <i class="fas fa-qrcode"></i> QRコードをスキャンしてください...
+            </div>
+            
+            <div class="control-buttons">
+                <button id="start-scanner" class="control-button primary-button">
+                    <i class="fas fa-camera"></i> カメラスキャンを開始
+                </button>
+                <button id="test-qr" class="control-button secondary-button">
+                    <i class="fas fa-vial"></i> テストQRを生成
+                </button>
+                <button id="clear-log" class="control-button secondary-button">
+                    <i class="fas fa-eraser"></i> ログをクリア
+                </button>
+                <button id="test-db" class="control-button secondary-button">
+                    <i class="fas fa-database"></i> DB接続テスト
+                </button>
+            </div>
+            
+            <!-- QRコードスキャナー -->
+            <div id="qr-scanner-container">
+                <div class="camera-selector" id="camera-select-container">
+                    <select id="camera-select">
+                        <option value="">カメラを選択...</option>
+                    </select>
+                </div>
+                
+                <div id="qr-scanner">
+                    <video id="qr-video" playsinline></video>
+                    <div class="scanner-overlay"></div>
+                    <div class="scanner-viewport"></div>
+                    <div class="scanner-corners corner-top-left"></div>
+                    <div class="scanner-corners corner-top-right"></div>
+                    <div class="scanner-corners corner-bottom-left"></div>
+                    <div class="scanner-corners corner-bottom-right"></div>
+                    <div class="scanner-laser"></div>
+                </div>
+                
+                <div class="scanner-hint">
+                    QRコードをスキャン範囲内にかざしてください
+                </div>
+
+                <button id="stop-scanner" class="control-button secondary-button" style="width: 100%; margin-top: 15px;">
+                    <i class="fas fa-stop"></i> スキャンを停止
+                </button>
+            </div>
+            
+            <!-- カメラアクセスエラーメッセージ -->
+            <div class="permission-error" id="camera-permission-error">
+                <h3><i class="fas fa-exclamation-triangle"></i> カメラへのアクセスが拒否されました</h3>
+                <p>QRコードを読み取るにはカメラへのアクセス許可が必要です。ブラウザの設定からカメラへのアクセスを許可してください。</p>
+            </div>
+            
+            <div class="log-container" id="log-container"></div>
+            
+            <div class="status-message" id="status-message"></div>
+            
+            <div class="info-box">
+                <h3><i class="fas fa-info-circle"></i> QRコードの形式</h3>
+                <p>QRコードは <code>id=002,tab=02</code> の形式で、商品IDとテーブル番号が記載されています。</p>
+                <p>カメラが使用できない場合は、テストQRボタンを押すか、キーボードで直接入力することもできます。</p>
+            </div>
+        </div>
+        
+        <div id="order-preview" class="order-preview">
+            <h3>注文プレビュー</h3>
+            <div id="table-info" class="table-info">
+                <i class="fas fa-table"></i> <span id="table-number">テーブル番号: --</span>
+            </div>
+            <div id="product-info" class="product-info">
+                <!-- 商品情報がここに入る -->
+            </div>
+            <div class="order-actions">
+                <button id="cancel-order" class="control-button secondary-button">
+                    <i class="fas fa-times"></i> キャンセル
+                </button>
+                <button id="submit-order" class="control-button primary-button">
+                    <i class="fas fa-check"></i> 注文を確定
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- jsQRライブラリを読み込み -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- MongoDB JavaScript Driver -->
+    <script src="https://unpkg.com/mongodb-stitch-browser-sdk@4.8.0/dist/bundle.js"></script>
+    
+    <script type="module">
+        // MongoDB接続モジュールと製品モジュールをインポート
+        import { testDbConnection } from './db.js';
+        import { parseQRCode, saveOrder } from './mongo_order.js';
+        import { getProductById } from './products.js';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const qrInputDisplay = document.getElementById('qr-input-display');
+            const logContainer = document.getElementById('log-container');
+            const statusMessage = document.getElementById('status-message');
+            const clearLogButton = document.getElementById('clear-log');
+            const testQrButton = document.getElementById('test-qr');
+            const startScannerButton = document.getElementById('start-scanner');
+            const stopScannerButton = document.getElementById('stop-scanner');
+            const qrScannerContainer = document.getElementById('qr-scanner-container');
+            const cameraPermissionError = document.getElementById('camera-permission-error');
+            const orderPreview = document.getElementById('order-preview');
+            const tableInfo = document.getElementById('table-number');
+            const productInfo = document.getElementById('product-info');
+            const cancelOrderButton = document.getElementById('cancel-order');
+            const submitOrderButton = document.getElementById('submit-order');
+            const videoElement = document.getElementById('qr-video');
+            const cameraSelect = document.getElementById('camera-select');
+            const dbStatusElement = document.getElementById('db-status');
+            const testDbButton = document.getElementById('test-db');
+            
+            let currentInput = '';
+            let inputBuffer = '';
+            let inputTimeout;
+            let scanning = false;
+            let videoStream = null;
+            let canvasElement = document.createElement('canvas');
+            let canvas = canvasElement.getContext('2d');
+            let dbConnected = false;
+            
+            // 現在の注文情報
+            let currentOrder = {
+                productId: null,
+                tableId: null,
+                product: null
+            };
+            
+            // DB接続ステータスを初期化
+            updateDbStatus('pending', 'データベース接続を初期化中...');
+            
+            // DB接続テスト
+            testDbConnection()
+                .then(connected => {
+                    if (connected) {
+                        updateDbStatus('connected', 'MongoDB接続済み');
+                        dbConnected = true;
+                        addLogEntry('MongoDBに正常に接続されました', 'success');
+                    } else {
+                        updateDbStatus('disconnected', 'MongoDB接続失敗');
+                        dbConnected = false;
+                        addLogEntry('MongoDBに接続できませんでした。ローカルストレージを使用します。', 'error');
+                    }
+                })
+                .catch(error => {
+                    updateDbStatus('disconnected', 'MongoDB接続エラー');
+                    dbConnected = false;
+                    addLogEntry(`MongoDB接続エラー: ${error.message}`, 'error');
+                    console.error('MongoDB接続エラー:', error);
+                });
+            
+            // DB接続ステータスを更新する関数
+            function updateDbStatus(status, message) {
+                dbStatusElement.className = `db-status ${status}`;
+                
+                if (status === 'connected') {
+                    dbStatusElement.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+                } else if (status === 'disconnected') {
+                    dbStatusElement.innerHTML = `<i class="fas fa-times-circle"></i> ${message}`;
+                } else if (status === 'pending') {
+                    dbStatusElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
+                }
+            }
+            
+            // ログエントリを追加する関数
+            function addLogEntry(message, type = 'info') {
+                const now = new Date();
+                const timestamp = now.toLocaleTimeString('ja-JP');
+                
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
+                logEntry.innerHTML = `
+                    <span class="timestamp">[${timestamp}]</span>
+                    <span class="content">${message}</span>
+                `;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // 注文プレビューを表示する関数
+            function showOrderPreview(productId, tableId) {
+                // 商品情報を取得
+                const product = getProductById(productId);
+                
+                if (!product) {
+                    addLogEntry(`商品ID ${productId} は見つかりません`, 'error');
+                    return;
+                }
+                
+                // 現在の注文情報を更新
+                currentOrder = {
+                    productId,
+                    tableId,
+                    product
+                };
+                
+                // テーブル情報を更新
+                tableInfo.textContent = `テーブル番号: ${tableId}`;
+                
+                // 商品情報を更新
+                productInfo.innerHTML = `
+                    <img src="${product.image}" alt="${product.name}" onerror="this.src='images/no-image.jpg'">
+                    <div class="product-details">
+                        <h4>${product.name}</h4>
+                        <div class="product-price">¥${product.price.toLocaleString()}</div>
+                        <div class="product-description">${product.description}</div>
+                    </div>
+                `;
+                
+                // QRスキャナーを停止
+                if (scanning) {
+                    stopScanner();
+                }
+                
+                // 注文プレビューを表示
+                orderPreview.style.display = 'block';
+                
+                // ステータスメッセージを表示
+                showStatusMessage(`${tableId} に ${product.name} を注文しますか？`, 'info');
+            }
+            
+            // ステータスメッセージを表示する関数
+            function showStatusMessage(message, type = 'success') {
+                statusMessage.textContent = message;
+                statusMessage.style.display = 'block';
+                
+                // タイプに応じた背景色の設定
+                if (type === 'success') {
+                    statusMessage.style.backgroundColor = '#e8f5e9';
+                    statusMessage.style.color = '#2e7d32';
+                } else if (type === 'error') {
+                    statusMessage.style.backgroundColor = '#ffebee';
+                    statusMessage.style.color = '#c62828';
+                } else if (type === 'info') {
+                    statusMessage.style.backgroundColor = '#e3f2fd';
+                    statusMessage.style.color = '#1565c0';
+                }
+                
+                // 5秒後に非表示
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 5000);
+            }
+            
+            // 利用可能なカメラデバイスを取得し、選択肢として表示
+            async function getAvailableCameras() {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    
+                    // カメラの選択肢をクリア
+                    cameraSelect.innerHTML = '<option value="">カメラを選択...</option>';
+                    
+                    // 各カメラを選択肢として追加
+                    videoDevices.forEach((device, index) => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        
+                        // デバイス名またはデバイス番号を表示
+                        const label = device.label || `カメラ ${index + 1}`;
+                        option.text = label;
+                        
+                        cameraSelect.appendChild(option);
+                    });
+                    
+                    // 少なくとも一つのカメラが見つかった場合
+                    if (videoDevices.length > 0) {
+                        // 背面カメラがあれば自動的に選択（スマートフォン向け）
+                        const backCamera = videoDevices.find(device => 
+                            device.label.toLowerCase().includes('back') || 
+                            device.label.toLowerCase().includes('rear') ||
+                            device.label.toLowerCase().includes('環境'));
+                        
+                        if (backCamera) {
+                            cameraSelect.value = backCamera.deviceId;
+                        } else {
+                            // 最初のカメラを選択
+                            cameraSelect.value = videoDevices[0].deviceId;
+                        }
+                    }
+                } catch (error) {
+                    console.error('カメラの列挙に失敗:', error);
+                    addLogEntry('カメラの列挙に失敗しました', 'error');
+                }
+            }
+            
+            // カメラ選択が変更されたときの処理
+            cameraSelect.addEventListener('change', () => {
+                if (scanning) {
+                    // 現在のスキャンを停止
+                    stopScanner();
+                    // 新しく選択されたカメラでスキャンを再開
+                    startScanner();
+                }
+            });
+            
+            // QRコードスキャナーを開始する関数
+            async function startScanner() {
+                if (scanning) return;
+                
+                try {
+                    // カメラの選択値を取得
+                    const cameraId = cameraSelect.value;
+                    
+                    // カメラへのアクセスを要求
+                    const constraints = {
+                        video: {
+                            facingMode: 'environment', // スマートフォンでは背面カメラを優先
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    };
+                    
+                    // 特定のカメラが選択されている場合は、そのカメラを使用
+                    if (cameraId) {
+                        constraints.video = { deviceId: { exact: cameraId } };
+                    }
+                    
+                    // カメラストリームを取得
+                    videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    videoElement.srcObject = videoStream;
+                    
+                    // メディアストリームの再生が開始されたとき
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play();
+                        
+                        // カメラの解像度に合わせてcanvasのサイズを設定
+                        canvasElement.width = videoElement.videoWidth;
+                        canvasElement.height = videoElement.videoHeight;
+                        
+                        // UI設定
+                        qrScannerContainer.style.display = 'block';
+                        startScannerButton.style.display = 'none';
+                        cameraPermissionError.style.display = 'none';
+                        
+                        // QRコードスキャン状態を設定
+                        scanning = true;
+                        
+                        // フレーム解析のループを開始
+                        requestAnimationFrame(scanQRCode);
+                        
+                        addLogEntry('QRコードスキャンを開始しました', 'info');
+                    };
+                } catch (error) {
+                    console.error('カメラへのアクセスエラー:', error);
+                    cameraPermissionError.style.display = 'block';
+                    addLogEntry('カメラへのアクセスが拒否されました', 'error');
+                }
+            }
+            
+            // QRコードスキャナーを停止する関数
+            function stopScanner() {
+                if (!scanning) return;
+                
+                // ビデオストリームを停止
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                    videoStream = null;
+                }
+                
+                // UI設定を元に戻す
+                videoElement.srcObject = null;
+                qrScannerContainer.style.display = 'none';
+                startScannerButton.style.display = 'inline-flex';
+                
+                // QRコードスキャン状態を更新
+                scanning = false;
+                
+                addLogEntry('QRコードスキャンを停止しました', 'info');
+            }
+            
+            // QRコードをスキャンする関数
+            function scanQRCode() {
+                if (!scanning) return;
+                
+                // ビデオの再生中かチェック
+                if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                    // ビデオフレームをcanvasに描画
+                    canvas.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                    const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    
+                    // jsQRライブラリでQRコードを検出
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert',
+                    });
+                    
+                    // QRコードが検出された場合
+                    if (code) {
+                        // QRコードの内容を表示
+                        qrInputDisplay.innerHTML = `<i class="fas fa-qrcode"></i> ${code.data}`;
+                        qrInputDisplay.style.backgroundColor = '#e8f5e9';
+                        
+                        // 検出成功フィードバック
+                        addLogEntry(`QRコード検出: ${code.data}`, 'success');
+                        
+                        // QRコードが正しい形式かチェック
+                        const qrData = parseQRCode(code.data);
+                        
+                        if (qrData && qrData.productId && qrData.tableId) {
+                            // 注文プレビューを表示
+                            showOrderPreview(qrData.productId, qrData.tableId);
+                            return; // スキャンを停止
+                        } else {
+                            addLogEntry(`無効なQRコード形式: ${code.data}`, 'error');
+                            showStatusMessage('無効なQRコード形式です。正しいQRコードをスキャンしてください。', 'error');
+                            
+                            // 2秒後に再開
+                            setTimeout(() => {
+                                if (scanning) {
+                                    requestAnimationFrame(scanQRCode);
+                                }
+                            }, 2000);
+                            return;
+                        }
+                    }
+                }
+                
+                // 次のフレームを解析
+                requestAnimationFrame(scanQRCode);
+            }
+            
+            // キー入力を監視
+            document.addEventListener('keydown', function(event) {
+                // エンターキーが押された場合は入力完了とみなす
+                if (event.key === 'Enter') {
+                    processInput();
+                    return;
+                }
+                
+                // 入力中のタイムアウトをリセット
+                clearTimeout(inputTimeout);
+                
+                // 表示可能な文字の場合、バッファに追加
+                if (event.key.length === 1) {
+                    inputBuffer += event.key;
+                    qrInputDisplay.innerHTML = `<i class="fas fa-keyboard"></i> ${inputBuffer}`;
+                    
+                    // 一定時間入力がなければ処理
+                    inputTimeout = setTimeout(processInput, 500);
+                }
+            });
+            
+            // 入力を処理する関数
+            function processInput() {
+                if (inputBuffer.trim() === '') return;
+                
+                // 入力をログに追加
+                addLogEntry(`QRコード入力: ${inputBuffer}`, 'info');
+                
+                // QRコードの解析
+                const qrData = parseQRCode(inputBuffer);
+                
+                if (qrData && qrData.productId && qrData.tableId) {
+                    addLogEntry(`有効なQRコード: 商品ID=${qrData.productId}, テーブル=${qrData.tableId}`, 'success');
+                    
+                    // 注文プレビューを表示
+                    showOrderPreview(qrData.productId, qrData.tableId);
+                } else {
+                    addLogEntry(`無効なQRコード形式: ${inputBuffer}`, 'error');
+                    showStatusMessage('無効なQRコード形式です', 'error');
+                }
+                
+                // 入力欄を初期化
+                inputBuffer = '';
+                qrInputDisplay.innerHTML = '<i class="fas fa-qrcode"></i> QRコードをスキャンしてください...';
+                
+                // 入力欄の背景色を一時的に変える
+                qrInputDisplay.style.backgroundColor = '#e3f2fd';
+                setTimeout(() => {
+                    qrInputDisplay.style.backgroundColor = '#f8f9fc';
+                }, 500);
+            }
+            
+            // クリアボタンのイベント
+            clearLogButton.addEventListener('click', function() {
+                logContainer.innerHTML = '';
+                statusMessage.style.display = 'none';
+                addLogEntry('ログをクリアしました', 'info');
+            });
+            
+            // テストQRボタンのイベント
+            testQrButton.addEventListener('click', function() {
+                // ランダムな商品IDとテーブル番号を生成
+                const productIdNum = Math.floor(Math.random() * 8) + 1;
+                const tableIdNum = Math.floor(Math.random() * 5) + 1;
+                
+                const testQrCode = `id=${productIdNum.toString().padStart(3, '0')},tab=${tableIdNum.toString().padStart(2, '0')}`;
+                
+                // 入力バッファに設定して処理
+                inputBuffer = testQrCode;
+                qrInputDisplay.innerHTML = `<i class="fas fa-vial"></i> ${testQrCode}`;
+                
+                // 処理を実行
+                processInput();
+            });
+            
+            // DB接続テストボタンのイベント
+            testDbButton.addEventListener('click', async function() {
+                addLogEntry('MongoDBへの接続をテスト中...', 'info');
+                updateDbStatus('pending', 'MongoDB接続をテスト中...');
+                
+                try {
+                    const connected = await testDbConnection();
+                    
+                    if (connected) {
+                        updateDbStatus('connected', 'MongoDB接続済み');
+                        dbConnected = true;
+                        addLogEntry('MongoDBに正常に接続されました', 'success');
+                        showStatusMessage('MongoDB接続テスト成功！', 'success');
+                    } else {
+                        updateDbStatus('disconnected', 'MongoDB接続失敗');
+                        dbConnected = false;
+                        addLogEntry('MongoDBに接続できませんでした', 'error');
+                        showStatusMessage('MongoDB接続テスト失敗', 'error');
+                    }
+                } catch (error) {
+                    updateDbStatus('disconnected', 'MongoDB接続エラー');
+                    dbConnected = false;
+                    addLogEntry(`MongoDB接続エラー: ${error.message}`, 'error');
+                    showStatusMessage('MongoDB接続テストエラー', 'error');
+                    console.error('MongoDB接続テストエラー:', error);
+                }
+            });
+            
+            // カメラスキャン開始ボタンのイベント
+            startScannerButton.addEventListener('click', async function() {
+                await getAvailableCameras();
+                startScanner();
+            });
+            
+            // カメラスキャン停止ボタンのイベント
+            stopScannerButton.addEventListener('click', function() {
+                stopScanner();
+            });
+            
+            // 注文キャンセルボタンのイベント
+            cancelOrderButton.addEventListener('click', function() {
+                orderPreview.style.display = 'none';
+                currentOrder = {
+                    productId: null,
+                    tableId: null,
+                    product: null
+                };
+                addLogEntry('注文がキャンセルされました', 'info');
+                showStatusMessage('注文がキャンセルされました', 'info');
+            });
+            
+            // 注文確定ボタンのイベント
+            submitOrderButton.addEventListener('click', async function() {
+                try {
+                    // 注文情報が揃っているか確認
+                    if (!currentOrder.productId || !currentOrder.tableId) {
+                        throw new Error('注文情報が不完全です');
+                    }
+                    
+                    // 注文ボタンを無効化（二重注文防止）
+                    submitOrderButton.disabled = true;
+                    
+                    // 注文状態メッセージを表示
+                    showStatusMessage('注文を保存中...', 'info');
+                    
+                    // データベース保存ステータスの表示
+                    addLogEntry(`注文を${dbConnected ? 'MongoDB' : 'ローカルストレージ'}に保存中...`, 'info');
+                    
+                    // 注文を保存
+                    const order = await saveOrder(currentOrder.productId, currentOrder.tableId);
+                    
+                    // 保存先表示
+                    const storageType = order._id ? 'MongoDB' : 'ローカルストレージ';
+                    
+                    // 成功メッセージ
+                    addLogEntry(`注文ID: ${order.id || order._id}で注文が確定しました (${storageType})`, 'success');
+                    showStatusMessage(`${currentOrder.tableId}に${currentOrder.product.name}の注文が確定しました`, 'success');
+                    
+                    // 注文プレビューを非表示
+                    orderPreview.style.display = 'none';
+                    
+                    // 注文情報をリセット
+                    currentOrder = {
+                        productId: null,
+                        tableId: null,
+                        product: null
+                    };
+                } catch (error) {
+                    addLogEntry(`注文エラー: ${error.message}`, 'error');
+                    showStatusMessage(`注文エラー: ${error.message}`, 'error');
+                } finally {
+                    // 注文ボタンを再有効化
+                    submitOrderButton.disabled = false;
+                }
+            });
+            
+            // カメラAPIの対応チェック
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                addLogEntry('お使いのブラウザはカメラAPIをサポートしていません', 'error');
+                showStatusMessage('お使いのブラウザはカメラAPIをサポートしていません。最新のブラウザを使用してください。', 'error');
+                startScannerButton.disabled = true;
+                startScannerButton.title = 'お使いのブラウザはカメラAPIをサポートしていません';
+            }
+            
+            // 初期メッセージ
+            addLogEntry('カメラスキャンを開始するか、テストQRボタンを押してください', 'info');
+        });
+    </script>
+    <script src="navigation.js"></script>
+</body>
+</html>
