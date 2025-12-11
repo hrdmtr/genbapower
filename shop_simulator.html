@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ラーメン店シミュレーター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        /* イベントボタンエリア */
+        .event-buttons {
+            display: grid;
+            gap: 10px;
+        }
+
+        .event-btn {
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .event-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .event-btn:active {
+            transform: translateY(0);
+        }
+
+        .event-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ステータス表示エリア */
+        .status-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+
+        .status-card h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 5px;
+            font-size: 15px;
+        }
+
+        .status-label {
+            color: #555;
+            font-weight: bold;
+        }
+
+        .status-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .status-value.warning {
+            color: #ff6b6b;
+        }
+
+        .status-value.success {
+            color: #51cf66;
+        }
+
+        /* スタッフ状態 */
+        .staff-status {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .staff-name {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+
+        .staff-current {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .staff-queue {
+            color: #666;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        /* 未提供料理リスト */
+        .pending-dishes {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .dish-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .dish-name {
+            color: #555;
+        }
+
+        .dish-count {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pending-dishes {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* アラート */
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .alert.error {
+            background: #ffe0e0;
+            color: #d32f2f;
+            border-left: 5px solid #d32f2f;
+        }
+
+        .alert.success {
+            background: #e0f7e0;
+            color: #2e7d32;
+            border-left: 5px solid #2e7d32;
+        }
+
+        /* トーストアニメーション */
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍜 ラーメン店シミュレーター</h1>
+
+        <div class="alert error" id="alertBox"></div>
+
+        <div class="main-grid">
+            <!-- 左側: イベントボタン -->
+            <div class="section">
+                <h2>📋 イベント操作</h2>
+                <div class="event-buttons">
+                    <button class="event-btn" id="btnCustomerArrival">👤 客が来店</button>
+                    <button class="event-btn" id="btnPurchaseTicket">🎫 食券購入（手動）</button>
+                    <button class="event-btn" id="btnStartCookingAuto">🔥 調理開始（自動で茹で時間決定）</button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin: 5px 0;">
+                        <button class="event-btn" id="btnStartCookingHard" style="font-size: 12px; padding: 8px;">🔥 硬め80秒</button>
+                        <button class="event-btn" id="btnStartCookingNormal" style="font-size: 12px; padding: 8px;">🔥 普通90秒</button>
+                        <button class="event-btn" id="btnStartCookingSoft" style="font-size: 12px; padding: 8px;">🔥 柔100秒</button>
+                    </div>
+                    <button class="event-btn" id="btnPlateNoodles">🍜 麺盛り付け（メイン10秒）</button>
+                    <button class="event-btn" id="btnPlateIngredients">🥢 具材盛り付け（サブ10秒）</button>
+                    <button class="event-btn" id="btnServeDish">🍜 料理提供</button>
+                    <button class="event-btn" id="btnFinishEating">✅ 食事完了</button>
+                    <button class="event-btn" id="btnCustomerLeave">👋 客が退店</button>
+                    <button class="event-btn" id="btnRefillCutlery">🍴 カトラリー補充指示</button>
+                    <button class="event-btn" id="btnStartDishwashing">🧽 洗い物開始指示</button>
+                    <button class="event-btn" id="btnStartCleaning">🧹 店内清掃開始指示</button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 2px solid #ddd;">
+                        <button class="event-btn" id="btnInstructMain" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">👨‍🍳 メイン指示</button>
+                        <button class="event-btn" id="btnInstructSub" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">👨‍🍳 サブ指示</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側: ステータス表示 -->
+            <div class="section">
+                <h2>📊 店舗ステータス</h2>
+                <div class="status-grid">
+                    <!-- 未提供の料理（最重要なので最上部） -->
+                    <div class="status-card" style="border-left-color: #ff6b6b; background: #fff5f5;">
+                        <h3 style="color: #ff6b6b;">📦 未提供の料理（最重要）</h3>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; padding: 15px; background: white; border-radius: 8px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">未提供の料理</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #ff6b6b;" id="totalPendingCount">0件</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">作成中の料理</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #f59e0b;" id="totalInProgressCount">0件</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">盛り付け待ち</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;" id="summaryPlatingWaiting">0件</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">提供待ち</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #10b981;" id="summaryReadyToServe">0件</div>
+                            </div>
+                        </div>
+
+                        <!-- 今すぐやるべきこと -->
+                        <div style="background: #fff; border: 3px solid #ff6b6b; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                            <h4 style="color: #ff6b6b; font-size: 18px; margin-bottom: 15px; font-weight: bold;">🔥 今すぐやるべきこと</h4>
+                            <div id="urgentActions" style="display: grid; gap: 10px;">
+                                <!-- 動的に生成 -->
+                            </div>
+                        </div>
+
+                        <!-- 未提供の料理一覧 -->
+                        <h4 style="color: #666; font-size: 16px; margin-bottom: 10px; font-weight: bold;">📋 未提供の料理一覧</h4>
+                        <div class="pending-dishes" id="pendingDishes">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 客のステータス -->
+                    <div class="status-card">
+                        <h3>👥 客のステータス</h3>
+                        <div class="status-item">
+                            <span class="status-label">食券に並んでいる</span>
+                            <span class="status-value" id="customersInLine">0人</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">料理を待っている</span>
+                            <span class="status-value" id="customersWaiting">0人</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">食事中</span>
+                            <span class="status-value" id="customersEating">0人</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">退店待ち</span>
+                            <span class="status-value" id="customersLeaving">0人</span>
+                        </div>
+                    </div>
+
+                    <!-- 厨房・料理状態 -->
+                    <div class="status-card">
+                        <h3>🍳 厨房・料理状態</h3>
+                        <div class="status-item" style="flex-direction: column; align-items: flex-start;">
+                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+                                <span class="status-label">茹で中</span>
+                                <span class="status-value" id="noodlesCookingCount">0/2</span>
+                            </div>
+                            <div id="noodlesDetail" style="font-size: 14px; color: #666; width: 100;"></div>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">盛り付け待ち</span>
+                            <span class="status-value" id="platingWaiting">0件</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">麺盛り付け済み（具材待ち）</span>
+                            <span class="status-value" id="noodlePlated">0件</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">提供可能</span>
+                            <span class="status-value success" id="readyToServe">0件</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">洗い物</span>
+                            <span class="status-value" id="dishesToWash">0個</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">カトラリー残量</span>
+                            <span class="status-value" id="cutleryCount">100個</span>
+                        </div>
+                    </div>
+
+                    <!-- スタッフ状態 -->
+                    <div class="status-card">
+                        <h3>👨‍🍳 スタッフ状態</h3>
+                        <div class="staff-status">
+                            <div class="staff-name">メインスタッフ</div>
+                            <div class="staff-current">状態: <span id="mainStaffStatus">手が空いている</span></div>
+                            <div class="staff-queue">指示キュー: <span id="mainStaffQueue">なし</span></div>
+                        </div>
+                        <div class="staff-status">
+                            <div class="staff-name">サブスタッフ</div>
+                            <div class="staff-current">状態: <span id="subStaffStatus">手が空いている</span></div>
+                            <div class="staff-queue">指示キュー: <span id="subStaffQueue">なし</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="shop_simulator.js"></script>
+</body>
+</html>
