@@ -132,6 +132,7 @@ class ShopStatus {
                 }
 
                 showAlert('麺が茹で上がりました！盛り付けしてください', 'success', false);
+                speakText('麺盛り付けしてください');
             }
 
             updateUI();
@@ -514,6 +515,7 @@ function handleQueuedInstruction(staff, instruction) {
                 shopStatus.platingWaiting--;
                 shopStatus.noodlePlated++;
                 showAlert('麺の盛り付けが完了しました', 'success', false);
+                speakText('具材盛り付けしてください');
             });
             break;
         case '具材盛り付け中':
@@ -521,6 +523,7 @@ function handleQueuedInstruction(staff, instruction) {
                 shopStatus.noodlePlated--;
                 shopStatus.readyToServe++;
                 showAlert('具材の盛り付けが完了しました！提供できます', 'success', false);
+                speakText('料理提供してください');
             });
             break;
         case 'カトラリー補充作業中':
@@ -827,6 +830,7 @@ function handlePlateNoodles() {
         shopStatus.platingWaiting--;
         shopStatus.noodlePlated++;
         showAlert('麺の盛り付けが完了しました', 'success', false);
+        speakText('具材盛り付けしてください');
     });
     showAlert('麺の盛り付けを開始しました', 'success', false);
 }
@@ -842,6 +846,7 @@ function handlePlateIngredients() {
         shopStatus.noodlePlated--;
         shopStatus.readyToServe++;
         showAlert('具材の盛り付けが完了しました！提供できます', 'success', false);
+        speakText('料理提供してください');
     });
     showAlert('具材の盛り付けを開始しました', 'success', false);
 }
