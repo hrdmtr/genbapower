@@ -4,6 +4,11 @@ let appMode = 'local';
 document.addEventListener('DOMContentLoaded', () => {
   fetchEnvironmentSettings();
   setupEventListeners();
+
+  // 1秒後に自動的にシミュレーターにリダイレクト
+  setTimeout(() => {
+    window.location.href = '/shop_simulator.html';
+  }, 1000);
 });
 
 function setupEventListeners() {
