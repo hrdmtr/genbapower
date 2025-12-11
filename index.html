@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QRコードリーダー注文システム</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
@@ -27,17 +31,92 @@
         </div>
         
         <div class="connection-panel">
-            <button id="connect-button" class="primary-button">QRコードリーダーに接続</button>
+            <button id="connect-button" class="primary-button"><i class="fas fa-plug"></i> QRコードリーダーに接続</button>
             <div id="connection-status" class="status-indicator">未接続</div>
+            <div class="admin-links">
+                <a href="admin.html" class="admin-link"><i class="fas fa-cog"></i> 商品管理画面</a>
+                <a href="orders.html" class="admin-link"><i class="fas fa-list-alt"></i> 注文一覧</a>
+                <a href="analytics.html" class="admin-link"><i class="fas fa-chart-line"></i> 注文分析</a>
+                <a href="time_analysis.html" class="admin-link"><i class="fas fa-stopwatch"></i> 処理時間分析</a>
+            </div>
+        </div>
+        
+        <div class="order-status-panel">
+            <h2><i class="fas fa-receipt"></i> 注文状況</h2>
+            <div id="order-status" class="order-status">テーブルが選択されていません</div>
+            <div class="order-actions">
+                <button id="reset-order" class="reset-button"><i class="fas fa-undo"></i> 注文リセット</button>
+                <button id="send-order" class="send-button"><i class="fas fa-paper-plane"></i> 注文送信</button>
+            </div>
+        </div>
+        
+        <div class="test-panel" id="test-panel">
+            <h2><i class="fas fa-vial"></i> テスト用コントロール</h2>
+            <div class="test-buttons">
+                <div class="table-selection">
+                    <h3>テーブル選択</h3>
+                    <div class="table-radio-group">
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE01">
+                            <span class="table-radio-label">テーブル1</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE02">
+                            <span class="table-radio-label">テーブル2</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE03">
+                            <span class="table-radio-label">テーブル3</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE04">
+                            <span class="table-radio-label">テーブル4</span>
+                        </label>
+                        <label class="table-radio">
+                            <input type="radio" name="table" value="TABLE05">
+                            <span class="table-radio-label">テーブル5</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <h3>商品選択</h3>
+                <div class="product-buttons">
+                    <button type="button" class="test-button" data-product-id="P001"><i class="fas fa-utensils"></i> 醤油ラーメン</button>
+                    <button type="button" class="test-button" data-product-id="P002"><i class="fas fa-utensils"></i> 味噌ラーメン</button>
+                    <button type="button" class="test-button" data-product-id="P003"><i class="fas fa-utensils"></i> 塩ラーメン</button>
+                    <button type="button" class="test-button" data-product-id="P004"><i class="fas fa-utensils"></i> とんこつラーメン</button>
+                    <button type="button" class="test-button" data-product-id="P005"><i class="fas fa-utensils"></i> つけ麺</button>
+                    <button type="button" class="test-button" data-product-id="P006"><i class="fas fa-bowl-food"></i> チャーシュー丼</button>
+                    <button type="button" class="test-button" data-product-id="P007"><i class="fas fa-drumstick-bite"></i> 餃子</button>
+                    <button type="button" class="test-button" data-product-id="P008"><i class="fas fa-beer"></i> ビール</button>
+                </div>
+            </div>
+            <div class="test-description">
+                <i class="fas fa-info-circle"></i> まずテーブルを選択し、商品ボタンをクリックすると注文が追加されます
+            </div>
+        </div>
+        
+        <div class="product-panel" id="product-panel">
+            <h2><i class="fas fa-shopping-cart"></i> 商品情報</h2>
+            <div id="product-container">
+                <div class="product-placeholder"><i class="fas fa-camera"></i> QRコードを読み取ると商品情報が表示されます</div>
+            </div>
         </div>
         
         <div class="log-panel">
-            <h2>ログ</h2>
+            <h2><i class="fas fa-history"></i> 操作ログ</h2>
             <div id="log-container"></div>
         </div>
     </div>
     
+<<<<<<< HEAD
+    <script src="products.js" type="module"></script>
+    <script src="app.js" type="module"></script>
+||||||| 35fbfa4
+    <script src="app.js"></script>
+=======
     <script src="navbar.js"></script>
     <script src="app.js"></script>
+>>>>>>> origin/main
 </body>
 </html>

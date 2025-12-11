@@ -1,0 +1,10 @@
+この場所に以下の画像ファイルを配置してください：
+
+shoyu_ramen.jpg
+miso_ramen.jpg
+shio_ramen.jpg
+tonkotsu_ramen.jpg
+tsukemen.jpg
+chashu_don.jpg
+gyoza.jpg
+beer.jpg
