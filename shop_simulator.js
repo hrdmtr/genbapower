@@ -1,5 +1,8 @@
 // ラーメン店シミュレーター - メインスクリプト
 
+// デモンストレーションモード管理
+let isDemoMode = false;
+
 // 商品マスター（products.jsから）
 const PRODUCTS = {
     'P001': { name: '醤油ラーメン', price: 800 },
@@ -179,8 +182,10 @@ function showAlert(message, type = 'error', enableSpeech = true) {
     alertBox.className = `alert ${type}`;
     alertBox.style.display = 'block';
 
-    // 音声ガイドを有効にする場合
-    if (enableSpeech) {
+    // デモモードの場合は常に音声ガイドを有効化
+    const shouldSpeak = isDemoMode || enableSpeech;
+
+    if (shouldSpeak) {
         speakText(message);
     }
 
@@ -225,8 +230,10 @@ function showToast(message, type = 'info', enableSpeech = true) {
     toast.textContent = message;
     document.body.appendChild(toast);
 
-    // 音声ガイドを有効にする場合
-    if (enableSpeech) {
+    // デモモードの場合は常に音声ガイドを有効化
+    const shouldSpeak = isDemoMode || enableSpeech;
+
+    if (shouldSpeak) {
         speakText(message);
     }
 
@@ -921,6 +928,34 @@ function handleInstructSub() {
     showToast(`【サブスタッフへの指示】\n${instruction}`, 'info');
 }
 
+// モード切り替えハンドラー
+function handleToggleMode() {
+    isDemoMode = !isDemoMode;
+
+    const btn = document.getElementById('toggleModeBtn');
+    const desc = document.getElementById('modeDescription');
+
+    if (isDemoMode) {
+        // デモモードON
+        btn.textContent = '🎤 デモンストレーションモード: ON';
+        btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        btn.style.boxShadow = '0 5px 15px rgba(239, 68, 68, 0.4)';
+        desc.textContent = 'デモモード: 全ての状況を音声でアナウンス';
+
+        // モード切り替えを音声で通知
+        speakText('デモンストレーションモードをオンにしました。全ての状況を音声でお知らせします。');
+    } else {
+        // デモモードOFF
+        btn.textContent = '🎤 デモンストレーションモード: OFF';
+        btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        btn.style.boxShadow = '0 5px 15px rgba(16, 185, 129, 0.4)';
+        desc.textContent = '通常モード: 指示のみ音声ガイダンス';
+
+        // モード切り替えを音声で通知
+        speakText('デモンストレーションモードをオフにしました。指示のみ音声でお知らせします。');
+    }
+}
+
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
     // DOM要素を取得
@@ -950,6 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // イベントリスナーを設定
+    document.getElementById('toggleModeBtn').addEventListener('click', handleToggleMode);
     document.getElementById('btnCustomerArrival').addEventListener('click', handleCustomerArrival);
     document.getElementById('btnPurchaseTicket').addEventListener('click', handlePurchaseTicket);
     document.getElementById('btnStartCookingAuto').addEventListener('click', handleStartCookingAuto);

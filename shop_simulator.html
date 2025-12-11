@@ -242,6 +242,32 @@
     <div class="container">
         <h1>🍜 ラーメン店シミュレーター</h1>
 
+        <!-- モード切り替えボタン -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button id="toggleModeBtn" style="
+                padding: 15px 40px;
+                font-size: 18px;
+                font-weight: bold;
+                border: none;
+                border-radius: 50px;
+                cursor: pointer;
+                transition: all 0.3s;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+            ">
+                🎤 デモンストレーションモード: OFF
+            </button>
+            <div id="modeDescription" style="
+                margin-top: 10px;
+                color: white;
+                font-size: 14px;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            ">
+                通常モード: 指示のみ音声ガイダンス
+            </div>
+        </div>
+
         <div class="alert error" id="alertBox"></div>
 
         <div class="main-grid">
