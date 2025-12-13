@@ -519,7 +519,7 @@ function handleQueuedInstruction(staff, instruction) {
     switch (instruction) {
         case '麺盛り付け中':
             startStaffWork(staff, instruction, 10000, () => {
-                shopStatus.platingWaiting--;
+                shopStatus.platingWaiting = Math.max(0, shopStatus.platingWaiting - 1);
                 shopStatus.noodlePlated++;
                 showAlert('麺の盛り付けが完了しました', 'success', false);
                 speakText('具材盛り付けしてください');
@@ -527,7 +527,7 @@ function handleQueuedInstruction(staff, instruction) {
             break;
         case '具材盛り付け中':
             startStaffWork(staff, instruction, 10000, () => {
-                shopStatus.noodlePlated--;
+                shopStatus.noodlePlated = Math.max(0, shopStatus.noodlePlated - 1);
                 shopStatus.readyToServe++;
                 showAlert('具材の盛り付けが完了しました！提供できます', 'success', false);
                 speakText('料理提供してください');
@@ -574,7 +574,7 @@ function startTicketQueueProcessing() {
     ticketQueueTimer = setInterval(() => {
         if (shopStatus.customersInLine > 0) {
             // 自動で食券購入
-            shopStatus.customersInLine--;
+            shopStatus.customersInLine = Math.max(0, shopStatus.customersInLine - 1);
             shopStatus.customersWaiting++;
 
             // とんこつラーメンのみ注文（P004）
@@ -615,12 +615,12 @@ function startTicketQueueProcessing() {
 
 // 食券購入（手動）
 function handlePurchaseTicket() {
-    if (shopStatus.customersInLine === 0) {
+    if (shopStatus.customersInLine <= 0) {
         showAlert('食券に並んでいる客がいません');
         return;
     }
 
-    shopStatus.customersInLine--;
+    shopStatus.customersInLine = Math.max(0, shopStatus.customersInLine - 1);
     shopStatus.customersWaiting++;
 
     // とんこつラーメンのみ注文（P004）
@@ -741,12 +741,12 @@ function handleStartCooking(cookingTime, hardness) {
 
 // 料理提供
 function handleServeDish() {
-    if (shopStatus.readyToServe === 0) {
+    if (shopStatus.readyToServe <= 0) {
         showAlert('提供可能な料理がありません（盛り付けを完了してください）');
         return;
     }
 
-    if (shopStatus.customersWaiting === 0) {
+    if (shopStatus.customersWaiting <= 0) {
         showAlert('料理を待っている客がいません');
         return;
     }
@@ -758,8 +758,8 @@ function handleServeDish() {
     }
 
     // 提供可能な料理を提供
-    shopStatus.readyToServe--;
-    shopStatus.customersWaiting--;
+    shopStatus.readyToServe = Math.max(0, shopStatus.readyToServe - 1);
+    shopStatus.customersWaiting = Math.max(0, shopStatus.customersWaiting - 1);
     shopStatus.customersEating++;
     shopStatus.useCutlery();
     shopStatus.dishesToWash++;
@@ -770,12 +770,12 @@ function handleServeDish() {
 
 // 食事完了
 function handleFinishEating() {
-    if (shopStatus.customersEating === 0) {
+    if (shopStatus.customersEating <= 0) {
         showAlert('食事中の客がいません');
         return;
     }
 
-    shopStatus.customersEating--;
+    shopStatus.customersEating = Math.max(0, shopStatus.customersEating - 1);
     shopStatus.customersLeaving++;
 
     showAlert('客が食事を完了しました', 'success', false);
@@ -784,12 +784,12 @@ function handleFinishEating() {
 
 // 客が退店
 function handleCustomerLeave() {
-    if (shopStatus.customersLeaving === 0) {
+    if (shopStatus.customersLeaving <= 0) {
         showAlert('退店待ちの客がいません');
         return;
     }
 
-    shopStatus.customersLeaving--;
+    shopStatus.customersLeaving = Math.max(0, shopStatus.customersLeaving - 1);
 
     showAlert('客が退店しました', 'success', false);
     updateUI();
@@ -806,7 +806,7 @@ function handleRefillCutlery() {
 
 // 洗い物開始指示
 function handleStartDishwashing() {
-    if (shopStatus.dishesToWash === 0) {
+    if (shopStatus.dishesToWash <= 0) {
         showAlert('洗い物がありません');
         return;
     }
@@ -828,13 +828,13 @@ function handleStartCleaning() {
 
 // 麺盛り付け指示（メインスタッフ）
 function handlePlateNoodles() {
-    if (shopStatus.platingWaiting === 0) {
+    if (shopStatus.platingWaiting <= 0) {
         showAlert('盛り付け待ちの麺がありません');
         return;
     }
 
     addInstructionToStaff('main', '麺盛り付け中', 10000, () => {
-        shopStatus.platingWaiting--;
+        shopStatus.platingWaiting = Math.max(0, shopStatus.platingWaiting - 1);
         shopStatus.noodlePlated++;
         showAlert('麺の盛り付けが完了しました', 'success', false);
         speakText('具材盛り付けしてください');
@@ -844,13 +844,13 @@ function handlePlateNoodles() {
 
 // 具材盛り付け指示（サブスタッフ）
 function handlePlateIngredients() {
-    if (shopStatus.noodlePlated === 0) {
+    if (shopStatus.noodlePlated <= 0) {
         showAlert('麺が盛り付けられた料理がありません');
         return;
     }
 
     addInstructionToStaff('sub', '具材盛り付け中', 10000, () => {
-        shopStatus.noodlePlated--;
+        shopStatus.noodlePlated = Math.max(0, shopStatus.noodlePlated - 1);
         shopStatus.readyToServe++;
         showAlert('具材の盛り付けが完了しました！提供できます', 'success', false);
         speakText('料理提供してください');
