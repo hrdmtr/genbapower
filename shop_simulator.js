@@ -369,11 +369,38 @@ function updateTotalCounts() {
 function speakText(text) {
     console.log('🔊 音声再生:', text);
 
+    // 利用可能な音声をチェック
+    const voices = window.speechSynthesis.getVoices();
+    console.log('📢 利用可能な音声数:', voices.length);
+
+    if (voices.length === 0) {
+        console.warn('⚠️ 音声がまだロードされていません。少し待ってから再試行します。');
+        // 音声がロードされるのを待つ
+        window.speechSynthesis.addEventListener('voiceschanged', () => {
+            speakTextInternal(text);
+        }, { once: true });
+        return;
+    }
+
+    speakTextInternal(text);
+}
+
+function speakTextInternal(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
+
+    // 日本語音声を優先的に選択
+    const voices = window.speechSynthesis.getVoices();
+    const japaneseVoice = voices.find(voice => voice.lang === 'ja-JP' || voice.lang === 'ja');
+    if (japaneseVoice) {
+        utterance.voice = japaneseVoice;
+        console.log('🗣️ 使用する音声:', japaneseVoice.name);
+    } else {
+        console.warn('⚠️ 日本語音声が見つかりません。デフォルト音声を使用します。');
+    }
 
     utterance.onerror = (event) => {
         console.error('❌ 音声エラー:', event);
@@ -387,7 +414,7 @@ function speakText(text) {
         console.log('⏹️ 音声終了:', text);
     };
 
-    // 音声をキューに追加（既存の音声が終わってから再生される）
+    // 音声をキューに追加
     window.speechSynthesis.speak(utterance);
 }
 
