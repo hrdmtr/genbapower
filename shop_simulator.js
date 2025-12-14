@@ -414,8 +414,10 @@ function speakTextInternal(text) {
         console.log('⏹️ 音声終了:', text);
     };
 
-    // 音声をキューに追加
-    window.speechSynthesis.speak(utterance);
+    // Chrome対策: 少し遅延を入れてから音声を再生
+    setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+    }, 100);
 }
 
 // 今すぐやるべきことを更新
