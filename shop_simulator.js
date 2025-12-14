@@ -386,38 +386,45 @@ function speakText(text) {
 }
 
 function speakTextInternal(text) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    // 日本語音声を優先的に選択
-    const voices = window.speechSynthesis.getVoices();
-    const japaneseVoice = voices.find(voice => voice.lang === 'ja-JP' || voice.lang === 'ja');
-    if (japaneseVoice) {
-        utterance.voice = japaneseVoice;
-        console.log('🗣️ 使用する音声:', japaneseVoice.name);
-    } else {
-        console.warn('⚠️ 日本語音声が見つかりません。デフォルト音声を使用します。');
+    // Chrome対策: speechSynthesisをリセット
+    if (window.speechSynthesis.speaking) {
+        console.log('⏸️ 既存の音声を停止');
+        window.speechSynthesis.cancel();
     }
 
-    utterance.onerror = (event) => {
-        console.error('❌ 音声エラー:', event);
-    };
-
-    utterance.onstart = () => {
-        console.log('▶️ 音声開始:', text);
-    };
-
-    utterance.onend = () => {
-        console.log('⏹️ 音声終了:', text);
-    };
-
-    // Chrome対策: 少し遅延を入れてから音声を再生
+    // 少し待ってから音声を作成
     setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ja-JP';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // 日本語音声を優先的に選択
+        const voices = window.speechSynthesis.getVoices();
+        const japaneseVoice = voices.find(voice => voice.lang === 'ja-JP' || voice.lang === 'ja');
+        if (japaneseVoice) {
+            utterance.voice = japaneseVoice;
+            console.log('🗣️ 使用する音声:', japaneseVoice.name);
+        } else {
+            console.warn('⚠️ 日本語音声が見つかりません。デフォルト音声を使用します。');
+        }
+
+        utterance.onerror = (event) => {
+            console.error('❌ 音声エラー:', event);
+        };
+
+        utterance.onstart = () => {
+            console.log('▶️ 音声開始:', text);
+        };
+
+        utterance.onend = () => {
+            console.log('⏹️ 音声終了:', text);
+        };
+
+        console.log('🎵 speak()を呼び出します');
         window.speechSynthesis.speak(utterance);
-    }, 100);
+    }, 50);
 }
 
 // 今すぐやるべきことを更新
