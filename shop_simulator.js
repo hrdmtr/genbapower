@@ -369,9 +369,6 @@ function updateTotalCounts() {
 function speakText(text) {
     console.log('🔊 音声再生:', text);
 
-    // 既存の音声を停止
-    window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     utterance.rate = 1.0;
@@ -390,6 +387,7 @@ function speakText(text) {
         console.log('⏹️ 音声終了:', text);
     };
 
+    // 音声をキューに追加（既存の音声が終わってから再生される）
     window.speechSynthesis.speak(utterance);
 }
 
