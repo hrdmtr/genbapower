@@ -995,6 +995,14 @@ function handleToggleMode() {
     }
 }
 
+// 音声合成の初期化（ユーザーインタラクション後に呼ばれる）
+function initializeSpeechSynthesis() {
+    // 空の音声を再生して音声合成を「アンロック」する
+    const utterance = new SpeechSynthesisUtterance('');
+    window.speechSynthesis.speak(utterance);
+    console.log('✅ 音声合成を初期化しました');
+}
+
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
     // DOM要素を取得
@@ -1024,8 +1032,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // イベントリスナーを設定
-    document.getElementById('toggleModeBtn').addEventListener('click', handleToggleMode);
-    document.getElementById('btnCustomerArrival').addEventListener('click', handleCustomerArrival);
+    document.getElementById('toggleModeBtn').addEventListener('click', () => {
+        initializeSpeechSynthesis();
+        handleToggleMode();
+    });
+    document.getElementById('btnCustomerArrival').addEventListener('click', () => {
+        initializeSpeechSynthesis();
+        handleCustomerArrival();
+    });
     document.getElementById('btnPurchaseTicket').addEventListener('click', handlePurchaseTicket);
     document.getElementById('btnStartCookingAuto').addEventListener('click', handleStartCookingAuto);
     document.getElementById('btnStartCookingHard').addEventListener('click', () => handleStartCooking(80, '硬め'));
