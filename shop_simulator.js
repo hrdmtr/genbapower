@@ -367,6 +367,8 @@ function updateTotalCounts() {
 
 // 音声で読み上げる関数
 function speakText(text) {
+    console.log('🔊 音声再生:', text);
+
     // 既存の音声を停止
     window.speechSynthesis.cancel();
 
@@ -375,6 +377,18 @@ function speakText(text) {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
+
+    utterance.onerror = (event) => {
+        console.error('❌ 音声エラー:', event);
+    };
+
+    utterance.onstart = () => {
+        console.log('▶️ 音声開始:', text);
+    };
+
+    utterance.onend = () => {
+        console.log('⏹️ 音声終了:', text);
+    };
 
     window.speechSynthesis.speak(utterance);
 }
